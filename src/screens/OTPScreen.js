@@ -9,14 +9,16 @@ import {
   SafeAreaView,
   Animated,
   Alert,
+  Keyboard,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
-const OTPScreen = ({ navigation }) => {
+const OTPScreen = ({ navigation, route }) => {
+  const { mobile } = route.params || {}; // ✅ prevent crash if no params
   const [otp, setOtp] = useState(new Array(6).fill(''));
-  const [timer, setTimer] = useState(30); // 30 seconds countdown
+  const [timer, setTimer] = useState(30);
+  const [errors, setErrors] = useState('');
   const inputRefs = useRef([]);
-
   const cardAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -27,7 +29,7 @@ const OTPScreen = ({ navigation }) => {
     }).start();
 
     const countdown = setInterval(() => {
-      setTimer(prev => {
+      setTimer((prev) => {
         if (prev <= 1) {
           clearInterval(countdown);
           return 0;
@@ -44,28 +46,50 @@ const OTPScreen = ({ navigation }) => {
       const newOtp = [...otp];
       newOtp[index] = text;
       setOtp(newOtp);
+      setErrors('');
 
-      // Move to next input automatically
       if (index < 5) {
-        inputRefs.current[index + 1].focus();
+        inputRefs.current[index + 1]?.focus(); // ✅ safe focus
+      } else {
+        Keyboard.dismiss();
       }
     }
   };
 
-  const handleBackspace = (text, index) => {
-    if (!text && index > 0) {
-      inputRefs.current[index - 1].focus();
+  const handleBackspace = (index) => {
+    if (index > 0) {
+      const newOtp = [...otp];
+      newOtp[index] = ''; // clear current box
+      setOtp(newOtp);
+      inputRefs.current[index - 1]?.focus(); // ✅ safe focus
     }
   };
 
-  const handleVerify = () => {
+  const validateOtp = () => {
     const enteredOtp = otp.join('');
-    if (enteredOtp.length < 6) {
-      Alert.alert('Error', 'Please enter the full 6-digit OTP.');
+    if (!/^\d{6}$/.test(enteredOtp)) {
+      setErrors('Please enter a valid 6-digit OTP');
+      return false;
+    }
+    return true;
+  };
+
+  const handleVerify = () => {
+    if (!validateOtp()) {
+      Alert.alert('⚠️ Error', 'Please enter a valid 6-digit OTP.');
       return;
     }
-    Alert.alert('Success', 'OTP Verified!');
-    navigation.navigate('HomeScreen'); // 👈 Change to your target screen
+
+    // ✅ Simulate success
+    Alert.alert('🎉 Success', 'OTP Verified!');
+    navigation.replace('HomeScreen');
+  };
+
+  const handleResend = () => {
+    setTimer(30);
+    setOtp(new Array(6).fill(''));
+    inputRefs.current[0]?.focus();
+    Alert.alert('ℹ️ Info', 'A new OTP has been sent (simulation).');
   };
 
   return (
@@ -78,25 +102,31 @@ const OTPScreen = ({ navigation }) => {
           ]}
         >
           <Text style={styles.title}>Verify OTP</Text>
-          <Text style={styles.subtitle}>Enter the 6-digit code sent to your number</Text>
+          <Text style={styles.subtitle}>
+            Enter the 6-digit code sent to{' '}
+            <Text style={{ fontWeight: 'bold' }}>{mobile}</Text>
+          </Text>
 
           {/* OTP Inputs */}
           <View style={styles.otpContainer}>
             {otp.map((digit, index) => (
               <TextInput
                 key={index}
-                style={styles.otpBox}
+                style={[styles.otpBox, errors ? { borderColor: 'red' } : null]}
                 keyboardType="numeric"
                 maxLength={1}
                 value={digit}
                 onChangeText={(text) => handleChange(text, index)}
-                onKeyPress={({ nativeEvent }) =>
-                  nativeEvent.key === 'Backspace' ? handleBackspace(digit, index) : null
-                }
+                onKeyPress={({ nativeEvent }) => {
+                  if (nativeEvent.key === 'Backspace' && !otp[index]) {
+                    handleBackspace(index);
+                  }
+                }}
                 ref={(ref) => (inputRefs.current[index] = ref)}
               />
             ))}
           </View>
+          {errors ? <Text style={styles.errorText}>{errors}</Text> : null}
 
           {/* Verify Button */}
           <TouchableOpacity onPress={handleVerify} style={{ width: '100%' }}>
@@ -109,7 +139,7 @@ const OTPScreen = ({ navigation }) => {
           {timer > 0 ? (
             <Text style={styles.timerText}>Resend OTP in {timer}s</Text>
           ) : (
-            <TouchableOpacity onPress={() => setTimer(30)}>
+            <TouchableOpacity onPress={handleResend}>
               <Text style={styles.resendText}>Resend OTP</Text>
             </TouchableOpacity>
           )}
@@ -163,4 +193,5 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 17 },
   timerText: { color: '#666', marginTop: 8 },
   resendText: { color: '#217908', fontWeight: '600', marginTop: 8 },
+  errorText: { color: 'red', fontSize: 13, marginTop: -10, marginBottom: 15 },
 });

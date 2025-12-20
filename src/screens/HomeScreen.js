@@ -1,128 +1,156 @@
-// HomeScreen.js
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import React, { useRef, useEffect } from "react";
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Animated,
+  Dimensions,
+} from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import LinearGradient from "react-native-linear-gradient";
 
-// Import all tab screens
-import Home from '../tabs/Home';
-import Chat from '../screens/Chat'; // ✅ Import Chat screen
-import Search from '../tabs/Search';
-import Add from '../tabs/Add';
-import MyAdds from '../tabs/MyAdds'; // ✅ Correct import for My Ads
-import User from '../tabs/User';
+// Screens
+import Home from "../tabs/Home";
+import MyAds from "../tabs/MyAds";
+import User from "../tabs/User";
+import Chat from "../screens/Chat";
+import SellCategories from "./SellCategories";
+
+const Tab = createBottomTabNavigator();
+const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
-  const [selectedTab, setSelectedTab] = useState(0);
+  const navigation = useNavigation();
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  const renderScreen = () => {
-    switch (selectedTab) {
-      case 0:
-        return <Home />;
-      case 1:
-        return <Chat />; // ✅ Show Chat screen here
-      case 2:
-        return <Add />;
-      case 3:
-        return <MyAdds />; // ✅ Now showing My Ads
-      case 4:
-        return <User />;
-      default:
-        return <Home />;
-    }
-  };
+  // 🚀 Floating pulse effect for Sell button
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [pulseAnim]);
 
   return (
-    <View style={styles.container}>
-      {/* Main Content */}
-      <View style={{ flex: 1 }}>
-        {renderScreen()}
-      </View>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: "#2e7d32", // ✅ green
+        tabBarInactiveTintColor: "#9e9e9e",
+        tabBarStyle: styles.tabBar,
+        tabBarIcon: ({ color }) => {
+          let iconName;
+          switch (route.name) {
+            case "Home":
+              iconName = "home-outline";
+              break;
+            case "Chat":
+              iconName = "chatbubble-outline";
+              break;
+            case "Sell":
+              iconName = "add-circle";
+              break;
+            case "MyAds":
+              iconName = "albums-outline";
+              break;
+            case "Account":
+              iconName = "person-outline";
+              break;
+            default:
+              iconName = "ellipse-outline";
+          }
+          return <Ionicons name={iconName} size={22} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="Home" component={Home} />
+      <Tab.Screen name="Chat" component={Chat} />
 
-      {/* Bottom Tab Bar */}
-      <View style={styles.bottomTabBar}>
-        <TouchableOpacity style={styles.tabButton} onPress={() => setSelectedTab(0)}>
-          <Icon name="home" size={28} color={selectedTab === 0 ? '#2e7d32' : '#222'} />
-          <Text style={[styles.tabLabel, selectedTab === 0 && { color: '#2e7d32' }]}>Home</Text>
-        </TouchableOpacity>
+      {/* 🌟 Floating SELL button with pulse animation */}
+      <Tab.Screen
+        name="Sell"
+        component={View}
+        options={{
+          tabBarLabel: "",
+          tabBarButton: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate("SellCategories")}
+              style={styles.sellButtonWrapper}
+              activeOpacity={0.9}
+            >
+              <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                <LinearGradient
+                  colors={["#43a047", "#2e7d32"]} // ✅ green gradient
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.sellButton}
+                >
+                  <Ionicons name="add" size={34} color="#fff" />
+                </LinearGradient>
+              </Animated.View>
+              <Text style={styles.sellLabel}>Sell</Text>
+            </TouchableOpacity>
+          ),
+        }}
+      />
 
-        <TouchableOpacity style={styles.tabButton} onPress={() => setSelectedTab(1)}>
-          <Icon name="chatbubble-outline" size={28} color={selectedTab === 1 ? '#2e7d32' : '#222'} />
-          <Text style={[styles.tabLabel, selectedTab === 1 && { color: '#2e7d32' }]}>Chats</Text>
-        </TouchableOpacity>
-
-        {/* Sell/Add Button */}
-        <TouchableOpacity
-          style={styles.sellButton}
-          onPress={() => setSelectedTab(2)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.sellButtonCircle}>
-            <Icon name="add" size={32} color="white" />
-          </View>
-          <Text style={styles.sellLabel}>Sell</Text>
-        </TouchableOpacity>
-
-
-        <TouchableOpacity style={styles.tabButton} onPress={() => setSelectedTab(3)}>
-          <Icon name="list-outline" size={28} color={selectedTab === 3 ? '#2e7d32' : '#222'} />
-          <Text style={[styles.tabLabel, selectedTab === 3 && { color: '#2e7d32' }]}>My Ads</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.tabButton} onPress={() => setSelectedTab(4)}>
-          <Icon name="person-outline" size={28} color={selectedTab === 4 ? '#2e7d32' : '#222'} />
-          <Text style={[styles.tabLabel, selectedTab === 4 && { color: '#2e7d32' }]}>Account</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <Tab.Screen name="MyAds" component={MyAds} />
+      <Tab.Screen name="Account" component={User} />
+    </Tab.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  bottomTabBar: {
-    height: 60,
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: '#fff',
+  tabBar: {
+    height: 80,
+    backgroundColor: "#fff", // ✅ solid white (not transparent)
+    // borderTopLeftRadius: 10,
+    // borderTopRightRadius: 10,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: -2 },
   },
-  tabButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabLabel: {
-    fontSize: 11,
-    marginTop: 2,
-    color: '#222',
+  sellButtonWrapper: {
+    top: -20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   sellButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    bottom: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 31,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#2e7d32",
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
-
-  sellButtonCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 35,
-    backgroundColor: 'linear-gradient(45deg, #2e7d32, #66bb6a)', // if expo-linear-gradient used
-    backgroundColor: '#2e7d32', // fallback if not using gradient
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-
   sellLabel: {
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: '600',
-    color: '#2e7d32',
+    marginTop: 6,
+    fontSize: 13,
+    color: "#2e7d32",
+    fontWeight: "700",
   },
-
 });
