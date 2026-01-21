@@ -251,7 +251,7 @@ const ChatScreen = ({ navigation }) => {
 
   if (filteredChats.length === 0 && search === '') {
     return (
-      <LinearGradient colors={['#E8F5E9', '#FFFFFF']} style={styles.emptyContainer}>
+      <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#16A34A" />
         <LinearGradient colors={['#0F8C4A', '#14B56D']} style={styles.header}>
           <TouchableOpacity
@@ -265,10 +265,75 @@ const ChatScreen = ({ navigation }) => {
           <View style={{ width: 40 }} />
         </LinearGradient>
 
-        <Icon name="message-text-outline" size={100} color="#16A34A" />
-        <Text style={styles.emptyTitle}>No Conversations Yet</Text>
-        <Text style={styles.emptySubtitle}>Start chatting to see messages here!</Text>
-      </LinearGradient>
+        <View style={styles.emptyStateContainer}>
+          <Animatable.View 
+            animation="bounceIn" 
+            delay={500}
+            style={styles.emptyIconContainer}
+          >
+            <LinearGradient 
+              colors={['#E8F5E9', '#F1F8E9']} 
+              style={styles.emptyIconBg}
+            >
+              <Icon name="message-text-outline" size={80} color="#16A34A" />
+            </LinearGradient>
+          </Animatable.View>
+
+          <Animatable.View 
+            animation="fadeInUp" 
+            delay={800}
+            style={styles.emptyTextContainer}
+          >
+            <Text style={styles.emptyTitle}>No Conversations Yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Start chatting with sellers and buyers{'\n'}to see your messages here!
+            </Text>
+          </Animatable.View>
+
+          <Animatable.View 
+            animation="fadeInUp" 
+            delay={1200}
+            style={styles.emptyActionsContainer}
+          >
+            <TouchableOpacity 
+              style={styles.exploreButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('Home')}
+            >
+              <LinearGradient 
+                colors={['#16A34A', '#22C55E']} 
+                style={styles.exploreButtonGradient}
+                start={{x: 0, y: 0}} 
+                end={{x: 1, y: 0}}
+              >
+                <Icon name="storefront-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.exploreButtonText}>Explore Products</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.sellButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('SellCategories')}
+            >
+              <View style={styles.sellButtonContainer}>
+                <Icon name="plus-circle-outline" size={20} color="#16A34A" />
+                <Text style={styles.sellButtonText}>Sell an Item</Text>
+              </View>
+            </TouchableOpacity>
+          </Animatable.View>
+
+          <Animatable.View 
+            animation="pulse" 
+            iterationCount="infinite"
+            delay={2000}
+            style={styles.tipContainer}
+          >
+            {/* <Icon name="lightbulb-outline" size={16} color="#FBBF24" /> */}
+            
+          </Animatable.View>
+        </View>
+      </View>
     );
   } else if (filteredChats.length === 0 && search !== '') {
     return (
@@ -472,22 +537,124 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   retryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  
+  // ✅ IMPROVED EMPTY STATE STYLES
+  emptyStateContainer: {
+    flex: 1,
+    backgroundColor: '#FAFAFA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  emptyIconContainer: {
+    marginBottom: 32,
+  },
+  emptyIconBg: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  emptyTextContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1F2937',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
+  emptyActionsContainer: {
+    width: '100%',
+    marginBottom: 32,
+  },
+  exploreButton: {
+    marginBottom: 16,
+    borderRadius: 16,
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  exploreButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+  },
+  exploreButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  sellButton: {
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#16A34A',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sellButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  sellButtonText: {
+    color: '#16A34A',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  tipContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    maxWidth: '90%',
+  },
+  tipText: {
+    fontSize: 13,
+    color: '#92400E',
+    marginLeft: 8,
+    flex: 1,
+    textAlign: 'center',
+  },
+  
+  // Remove old empty container style
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    color: '#777',
-    textAlign: 'center',
-    marginTop: 6,
   },
   emptySearchContainer: {
     flex: 1,

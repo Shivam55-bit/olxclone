@@ -1,4 +1,4 @@
-package com.olxclone
+package com.bhoomitechzone.sellbuytm
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -28,11 +28,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setContentTitle(remoteMessage.notification?.title ?: "New Notification")
-            .setContentText(remoteMessage.notification?.body ?: "")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(remoteMessage.notification?.title ?: "New Message")
+            .setContentText(remoteMessage.notification?.body ?: "You have a new message")
             .setAutoCancel(true)
 
         notificationManager.notify(0, notificationBuilder.build())
+    }
+
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+        // Send token to your server if needed
     }
 }

@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+// ✅ FIXED: Import BASE_URL for consistency
+import { BASE_URL } from './api';
 
-const BASE_URL = 'https://bhoomi.dinahub.live/api/messages/';
+// Messages endpoint base
+const MESSAGES_BASE = '/api/messages/';
 
 // Get auth token from AsyncStorage
 const getAuthToken = async () => {
@@ -21,7 +24,7 @@ export const sendMessage = async (content, receiverId, productId = null) => {
   try {
     const token = await getAuthToken();
     const response = await axios.post(
-      `${BASE_URL}`,
+      `${BASE_URL}${MESSAGES_BASE}`,
       {
         content,
         receiver_id: receiverId,

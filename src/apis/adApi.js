@@ -67,4 +67,137 @@ export const getMyAds = async (page = 1, size = 20) => {
     return handleAuthRequest(endpoint, options);
 };
 
+/**
+ * Get single ad details by ID
+ * Endpoint: GET /ads/single/{ad_id}
+ */
+export const getAdById = async (ad_id) => {
+    const endpoint = `/ads/single/${ad_id}`;
+    return handleAuthRequest(endpoint);
+};
+
+/**
+ * Get all ads with pagination
+ * Endpoint: GET /ads/
+ */
+export const getAllAds = async (page = 1, size = 20) => {
+    const endpoint = `/ads/`;
+    const options = {
+        params: {
+            page: page,
+            size: size,
+        },
+    };
+    return handleAuthRequest(endpoint, options);
+};
+
+/**
+ * Create new ad
+ * Endpoint: POST /ads/
+ */
+export const createAd = async (adData) => {
+    try {
+        const res = await api.post('/ads/', adData);
+        return res.data;
+    } catch (error) {
+        const errorMessage = error.message || "Failed to create ad";
+        return { 
+            success: false, 
+            error: errorMessage 
+        };
+    }
+};
+
+/**
+ * Update existing ad
+ * Endpoint: PUT /ads/{ad_id}
+ */
+export const updateAd = async (ad_id, adData) => {
+    try {
+        const res = await api.put(`/ads/${ad_id}`, adData);
+        return res.data;
+    } catch (error) {
+        const errorMessage = error.message || "Failed to update ad";
+        return { 
+            success: false, 
+            error: errorMessage 
+        };
+    }
+};
+
+/**
+ * Delete ad
+ * Endpoint: DELETE /ads/{ad_id}
+ */
+export const deleteAd = async (ad_id) => {
+    try {
+        const res = await api.delete(`/ads/${ad_id}`);
+        return res.data;
+    } catch (error) {
+        const errorMessage = error.message || "Failed to delete ad";
+        return { 
+            success: false, 
+            error: errorMessage 
+        };
+    }
+};
+
+/**
+ * Get similar ads
+ * Endpoint: GET /ads/{ad_id}/similar
+ */
+export const getSimilarAds = async (ad_id) => {
+    const endpoint = `/ads/${ad_id}/similar`;
+    return handleAuthRequest(endpoint);
+};
+
+/**
+ * Increment ad view count
+ * Endpoint: POST /ads/{ad_id}/view
+ */
+export const incrementAdView = async (ad_id) => {
+    try {
+        const res = await api.post(`/ads/${ad_id}/view`);
+        return res.data;
+    } catch (error) {
+        const errorMessage = error.message || "Failed to increment view";
+        return { 
+            success: false, 
+            error: errorMessage 
+        };
+    }
+};
+
+/**
+ * Toggle ad like
+ * Endpoint: POST /ads/{ad_id}/like
+ */
+export const toggleAdLike = async (ad_id) => {
+    try {
+        const res = await api.post(`/ads/${ad_id}/like`);
+        return res.data;
+    } catch (error) {
+        const errorMessage = error.message || "Failed to toggle like";
+        return { 
+            success: false, 
+            error: errorMessage 
+        };
+    }
+};
+
+/**
+ * Get ads by user
+ * Endpoint: GET /ads/by-user/{user_id}
+ */
+export const getAdsByUser = async (user_id, page = 1, size = 20) => {
+    const endpoint = `/ads/by-user/${user_id}`;
+    const options = {
+        params: {
+            page: page,
+            size: size,
+        },
+    };
+    return handleAuthRequest(endpoint, options);
+};
+
 // You can add other ad-related endpoints here (e.g., postAd, deleteAd, etc.)

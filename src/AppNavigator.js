@@ -11,7 +11,7 @@ import { ItemsProvider } from './ItemsContext';
 
 // Screens
 import HomeScreen from './screens/HomeScreen';
-
+import CategoryItemsScreen from './screens/CategoryItemsScreen';
 import ItemDetails from './screens/ItemDetails';
 import Wishlist from './screens/Wishlist';
 import Splash from './screens/Splash';
@@ -105,6 +105,11 @@ const AppNavigator = () => {
 
             {/* Main */}
             <Stack.Screen name="HomeScreen" component={HomeScreen} />
+            <Stack.Screen
+              name="CategoryItemsScreen"
+              component={CategoryItemsScreen}
+              options={{ title: 'Category Items', headerShown: true }}
+            />
             <Stack.Screen
               name="ItemDetails"
               component={ItemDetails}

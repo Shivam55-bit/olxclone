@@ -420,7 +420,7 @@ export default function Home() {
 
             {/* 🔹 Fixed Header */}
             <LinearGradient colors={['#2e7d32', '#1b5e20']} style={styles.header}>
-                <Text style={styles.headerTitle}>Bhoomi24</Text>
+                <Text style={styles.headerTitle}>SellBuyTM</Text>
                 <TouchableOpacity 
                     style={styles.locationContainer} 
                     onPress={() => setIsLocationModalVisible(true)}
@@ -768,6 +768,11 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     headerTitle: { fontSize: 26, fontWeight: '900', color: '#C8E6C9' },
+    headerLogo: { 
+        height: 55, 
+        width: 150, 
+        // tintColor: '#FFFFFF'
+    },
     locationContainer: { 
         flexDirection: 'row', 
         alignItems: 'center', 

@@ -22,8 +22,9 @@ import Modal from 'react-native-modal';
 
 const { width } = Dimensions.get('window');
 
-// Base URL extracted from your API request details
-const BASE_IMAGE_URL = 'https://bhoomi.dinahub.live';
+// Base URL corrected to use the proper API endpoint
+const BASE_API_URL = 'https://olx.fixsservices.com';
+const BASE_IMAGE_URL = 'https://olx.fixsservices.com'; // Updated to match API URL
 const PLACEHOLDER_IMAGE_URL = 'https://via.placeholder.com/400x300.png?text=No+Image';
 
 // --- MOCK/CONTEXT HOOKS ---
@@ -215,7 +216,7 @@ export default function Search() {
             setItems([]); // Clear old items
 
             // API URL construction confirmed: /ads/by-parent/{category}?page=1&size=20
-            const API_ENDPOINT = `${BASE_IMAGE_URL}/ads/by-parent/${category}?page=1&size=20`;
+            const API_ENDPOINT = `${BASE_API_URL}/ads/by-parent/${category}?page=1&size=20`;
 
             try {
                 const response = await fetch(API_ENDPOINT, {
@@ -289,13 +290,19 @@ export default function Search() {
 
     // --- Render Item (Card) ---
     const renderItem = ({ item }) => {
-        const imagePath = item.images?.[0];
+        // ✅ Enhanced image handling with multiple fallback options
+        const imagePath = item.images?.[0] || item.image;
         let fullImageUrl = PLACEHOLDER_IMAGE_URL;
 
         if (imagePath) {
+            // If it's already a full URL, use it directly
             if (imagePath.startsWith('http')) {
                 fullImageUrl = imagePath;
-            } else {
+            } else if (imagePath.startsWith('data:image')) {
+                // Handle base64 images
+                fullImageUrl = imagePath;
+            } else if (imagePath) {
+                // If it's a relative path, construct full URL
                 const cleanedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
                 fullImageUrl = `${BASE_IMAGE_URL}${cleanedPath}`;
             }
@@ -327,6 +334,17 @@ export default function Search() {
                     <Image
                         source={{ uri: fullImageUrl }}
                         style={styles.cardImage}
+                        defaultSource={require('../images/user_placeholder.png')}
+                        onError={(e) => {
+                            console.log('Image loading failed for:', item.title, 'URL:', fullImageUrl, 'Error:', e.nativeEvent.error);
+                        }}
+                        onLoadStart={() => {
+                            // Optional: Add loading state
+                        }}
+                        onLoad={() => {
+                            // Optional: Remove loading state  
+                        }}
+                        resizeMode="cover"
                     />
                 </View>
 

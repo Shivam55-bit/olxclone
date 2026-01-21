@@ -2,11 +2,13 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { Alert } from 'react-native';
 // 🔑 Import the token retrieval functions from the auth utility file
 import { getAccessToken, getTokenType } from './apis/authApi';
+// ✅ FIXED: Import correct BASE_URL
+import { BASE_URL } from './apis/api';
 
 const WishlistContext = createContext();
 
-// 🔑 API Configuration
-const API_BASE_URL = 'https://bhoomi.dinahub.live/api/';
+// 🔑 API Configuration - Using correct base URL
+const API_BASE_URL = `${BASE_URL}/api/`;
 // Removed the hardcoded AUTH_TOKEN
 
 // 🔑 Helper: Get item ID safely

@@ -1,17 +1,29 @@
-// src/apis/favoritesApi.js
+// src/apis/favoritesApi.js - Updated with exact API endpoints from curl commands
 
-// 🔑 API Configuration (Keep this here, away from the Context)
-// 💡 Recommended Fix: Switch to HTTPS for production and security reasons.
-const API_BASE_URL = 'https://bhoomi.dinahub.live/api/'; 
-const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzMTIzIiwiZXhwIjoxNzYwMDkwMTU1fQ.xSEBlG1McDewKhdBYkOtOVLjTSZH06Dgj1uvNwR6HCU'; 
-const IMAGE_BASE_URL = 'https://bhoomi.dinahub.live'; // Base URL for constructing absolute image URIs
+import { BASE_URL } from './api';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// 🔑 API Configuration
+const API_BASE_URL = `${BASE_URL}/api/`; 
+const IMAGE_BASE_URL = 'https://olx.fixsservices.com';
 
 // 🔑 Helper function to get headers for authenticated requests
-const getAuthHeaders = () => ({
-    'accept': 'application/json',
-    'Authorization': `Bearer ${AUTH_TOKEN}`,
-    'Content-Type': 'application/json',
-});
+const getAuthHeaders = async () => {
+    try {
+        const token = await AsyncStorage.getItem('access_token');
+        return {
+            'accept': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        };
+    } catch (error) {
+        console.error('Failed to get auth token:', error);
+        return {
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+        };
+    }
+};
 
 // 🔑 Helper function to handle API response
 const handleApiResponse = async (response) => {
@@ -23,90 +35,127 @@ const handleApiResponse = async (response) => {
         } catch {
             errorText = await response.text();
         }
-        // Throw an error that includes relevant status and message
+        
+        if (response.status === 401) {
+            throw new Error('Authentication required. Please log in to access favorites.');
+        } else if (response.status === 502) {
+            throw new Error('Server is temporarily unavailable. Please try again later.');
+        } else if (response.status === 404) {
+            throw new Error('Favorites endpoint not found.');
+        }
+        
         throw new Error(`API call failed with status ${response.status}: ${errorText}`);
     }
-    // Return the parsed JSON data
+    
+    // Handle empty responses (like DELETE operations)
+    const contentType = response.headers.get('content-type');
+    if (response.status === 204 || !contentType?.includes('application/json')) {
+        return { success: true };
+    }
+    
     return response.json();
 };
 
-// ----------------------------------------------------------------------
-// --- API Function 1: GET Wishlist ---
-// ----------------------------------------------------------------------
+// ================= GET FAVOURITES ==================
+// curl -X 'GET' 'https://olx.fixsservices.com/api/favourites/' -H 'accept: application/json' -H 'Authorization: Bearer {token}'
 export const getFavorites = async () => {
     try {
+        const headers = await getAuthHeaders();
         const response = await fetch(`${API_BASE_URL}favourites/`, {
             method: 'GET',
-            headers: getAuthHeaders(),
+            headers: headers,
         });
 
         const data = await handleApiResponse(response);
         
-        // 💡 Enhancement: Map the data to prepend the IMAGE_BASE_URL for correct display
-        // This ensures the Image component gets a fully absolute URL (e.g., https://domain.com/uploads/...)
-        const cleanedData = data.map(item => {
-            // Check if the image path is relative (starts with '/')
-            if (typeof item.image === 'string' && item.image.startsWith('/')) {
-                return { 
-                    ...item, 
-                    image: `${IMAGE_BASE_URL}${item.image}` // Creates the full absolute URL
-                };
-            }
-            return item;
-        });
+        // Map data to include correct image URLs
+        if (Array.isArray(data)) {
+            return data.map(item => {
+                if (item?.image && !item.image.startsWith('http')) {
+                    return { ...item, image: `${IMAGE_BASE_URL}${item.image}` };
+                }
+                return item;
+            });
+        }
 
-        return cleanedData; 
+        return data || [];
         
     } catch (error) {
-        console.error('Fetch Wishlist API Error:', error.message);
-        // Return empty array if API route doesn't exist (404) to prevent app crash
+        console.error('Fetch Favorites API Error:', error.message);
         if (error.message.includes('404')) {
-            console.warn('Wishlist API endpoint not found. Returning empty wishlist.');
+            console.warn('Favorites API endpoint not found. Returning empty favorites.');
             return [];
         }
-        throw error; // Re-throw the error for the context to handle
-    }
-};
-
-// ----------------------------------------------------------------------
-// --- API Function 2: REMOVE From Wishlist (Assumes DELETE method) ---
-// ----------------------------------------------------------------------
-export const removeFromWishlistApi = async (itemId) => {
-    try {
-        const response = await fetch(`${API_BASE_URL}favourites/${itemId}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(),
-        });
-
-        // The API might return 204 No Content for a successful DELETE, so check status explicitly
-        if (response.status === 204 || response.ok) {
-            return true;
-        }
-
-        await handleApiResponse(response); // Will throw if status is bad
-
-    } catch (error) {
-        // console.error(`API Error (removeFromWishlistApi) for item ${itemId}:`, error.message);
         throw error;
     }
 };
 
-// ----------------------------------------------------------------------
-// --- API Function 3: ADD to Wishlist (Assumes POST method) ---
-// ----------------------------------------------------------------------
-export const addToWishlistApi = async (itemId) => {
+// ================= ADD TO FAVOURITES ==================
+// curl -X 'POST' 'https://olx.fixsservices.com/api/favourites/{product_id}' -H 'accept: application/json' -H 'Authorization: Bearer {token}' -d ''
+export const addToFavorites = async (productId) => {
     try {
-        const response = await fetch(`${API_BASE_URL}favourites/`, {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}favourites/${productId}`, {
             method: 'POST',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ product_id: itemId }) // Adjust payload key if needed
+            headers: headers,
         });
-        
-        const data = await handleApiResponse(response);
-        return data; // Usually returns the newly created favorite item/confirmation
+
+        return await handleApiResponse(response);
         
     } catch (error) {
-        // console.error(`API Error (addToWishlistApi) for item ${itemId}:`, error.message);
+        console.error(`Add to Favorites API Error for product ${productId}:`, error.message);
         throw error;
     }
+};
+
+// ================= REMOVE FROM FAVOURITES ==================
+// curl -X 'DELETE' 'https://olx.fixsservices.com/api/favourites/{product_id}' -H 'accept: application/json' -H 'Authorization: Bearer {token}'
+export const removeFromFavorites = async (productId) => {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}favourites/${productId}`, {
+            method: 'DELETE',
+            headers: headers,
+        });
+
+        return await handleApiResponse(response);
+        
+    } catch (error) {
+        console.error(`Remove from Favorites API Error for product ${productId}:`, error.message);
+        throw error;
+    }
+};
+
+// ================= CLEAR ALL FAVOURITES ==================
+// curl -X 'DELETE' 'https://olx.fixsservices.com/api/favourites/clear' -H 'accept: application/json' -H 'Authorization: Bearer {token}'
+export const clearAllFavorites = async () => {
+    try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}favourites/clear`, {
+            method: 'DELETE',
+            headers: headers,
+        });
+
+        return await handleApiResponse(response);
+        
+    } catch (error) {
+        console.error('Clear All Favorites API Error:', error.message);
+        throw error;
+    }
+};
+
+// ================= LEGACY COMPATIBILITY ==================
+// Keep old function names for compatibility with existing code
+export const addToWishlistApi = addToFavorites;
+export const removeFromWishlistApi = removeFromFavorites;
+
+// Named exports
+export default {
+    getFavorites,
+    addToFavorites,
+    removeFromFavorites,
+    clearAllFavorites,
+    // Legacy compatibility
+    addToWishlistApi,
+    removeFromWishlistApi
 };

@@ -656,7 +656,7 @@ export default function MyAds({ navigation }) {
               : "Try adjusting your filter"}
           </Text>
           {totalAdsCount === 0 ? (
-            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('PostAd')}>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('SellCategories')}>
               <LinearGradient
                 colors={COLORS.accentGradient}
                 start={{ x: 0, y: 0 }}
@@ -743,7 +743,7 @@ export default function MyAds({ navigation }) {
       {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('PostAd')}
+        onPress={() => navigation.navigate('SellCategories')}
         activeOpacity={0.9}
       >
         <LinearGradient

@@ -7,9 +7,11 @@ import {
     refreshToken, 
     logout 
 } from "./authApi";
+// ✅ FIXED: Import centralized error handler
+import { handleApiError, logApiCall } from "./errorHandler";
 
 // 🔑 SET THIS CORRECTLY! Base URL for your API.
-export const BASE_URL = "https://bhoomi.dinahub.live";
+export const BASE_URL = "https://olx.fixsservices.com";
 
 const api = axios.create({
     baseURL: BASE_URL,
@@ -35,39 +37,9 @@ const processQueue = (error, token = null) => {
 
 // Helper function to format complex error data into a single, readable string
 const formatApiErrorMessage = (error) => {
-    const errorResponse = error.response;
-    if (!errorResponse || !errorResponse.data) {
-        return error.message || "An unknown network error occurred.";
-    }
-
-    const errorDetail = errorResponse.data.detail || errorResponse.data.message || errorResponse.data;
-
-    if (Array.isArray(errorDetail)) {
-        // Handle FastAPI/Pydantic validation array structure
-        const validationMessages = errorDetail.map(detail => {
-            const field = detail.loc ? detail.loc.slice(1).join('.') : 'Unknown Field';
-            return `${field}: ${detail.msg || detail.message}`;
-        });
-        return validationMessages.join('\n');
-    } else if (typeof errorDetail === 'string') {
-        return errorDetail;
-    } else if (typeof errorDetail === 'object' && errorDetail !== null) {
-        // Handle general JSON object errors
-        let detailMessages = [];
-        try {
-            for (const key in errorDetail) {
-                const value = errorDetail[key];
-                const fieldErrors = Array.isArray(value) ? value.join(', ') : String(value);
-
-                detailMessages.push(`${key.toUpperCase()}: ${fieldErrors}`);
-            }
-            return detailMessages.length > 0 ? detailMessages.join('\n') : JSON.stringify(errorDetail, null, 2);
-        } catch (e) {
-            return JSON.stringify(errorDetail, null, 2);
-        }
-    }
-
-    return String(errorDetail);
+    // ✅ FIXED: Use centralized error handler
+    const errorInfo = handleApiError(error, 'API Request');
+    return errorInfo.error;
 };
 
 

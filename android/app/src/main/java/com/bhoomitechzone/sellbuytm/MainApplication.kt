@@ -1,4 +1,4 @@
-package com.olxclone
+package com.bhoomitechzone.sellbuytm
 
 import android.app.Application
 import com.facebook.react.PackageList
@@ -32,6 +32,7 @@ class MainApplication : Application(), ReactApplication {
     super.onCreate()
     SoLoader.init(this, false)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
+      // If you opted-in for the New Architecture, we load the native entry point for this app.
       load()
     }
   }

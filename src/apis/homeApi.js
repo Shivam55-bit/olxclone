@@ -97,3 +97,74 @@ export const getFollowingItems = async () => {
     };
     return handleRequest("/api/following", options); 
 };
+
+/**
+ * 🔹 GET Recommendations
+ * Endpoint: /api/recommendations/
+ */
+export const getRecommendations = async (limit = 20) => {
+    const options = {
+        params: { limit }
+    };
+    return handleRequest("/api/recommendations/", options);
+};
+
+/**
+ * 🔹 GET Similar Recommendations
+ * Endpoint: /api/recommendations/similar/{ad_id}
+ */
+export const getSimilarRecommendations = async (ad_id) => {
+    return handleRequest(`/api/recommendations/similar/${ad_id}`);
+};
+
+/**
+ * 🔹 GET Trending Ads
+ * Endpoint: /api/recommendations/trending
+ */
+export const getTrendingAds = async (limit = 20) => {
+    const options = {
+        params: { limit }
+    };
+    return handleRequest("/api/recommendations/trending", options);
+};
+
+/**
+ * 🔹 GET Category Recommendations
+ * Endpoint: /api/recommendations/category/{category_name}
+ */
+export const getCategoryRecommendations = async (category_name, limit = 20) => {
+    const options = {
+        params: { limit }
+    };
+    return handleRequest(`/api/recommendations/category/${category_name}`, options);
+};
+
+/**
+ * 🔹 GET Location Recommendations  
+ * Endpoint: /api/recommendations/location/{location}
+ */
+export const getLocationRecommendations = async (location, limit = 20) => {
+    const options = {
+        params: { limit }
+    };
+    return handleRequest(`/api/recommendations/location/${location}`, options);
+};
+
+/**
+ * 🔹 GET Search Suggestions
+ * Endpoint: /api/search/suggestions
+ */
+export const getSearchSuggestions = async (query) => {
+    const options = {
+        params: { q: query }
+    };
+    return handleRequest("/api/search/suggestions", options);
+};
+
+/**
+ * 🔹 GET Trending Searches
+ * Endpoint: /api/search/trending
+ */
+export const getTrendingSearches = async () => {
+    return handleRequest("/api/search/trending");
+};
