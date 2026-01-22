@@ -722,7 +722,9 @@ export default function MyAds({ navigation }) {
             <Text style={styles.headerSubtitle}>{ads.length} total listings</Text>
           </View>
           
-          <TouchableOpacity style={styles.headerIconButton}>
+          <TouchableOpacity style={styles.headerIconButton} 
+            onPress={() => navigation.navigate('Notifications')}
+          >
             <Icon name="notifications-outline" size={24} color={COLORS.textLight} />
           </TouchableOpacity>
         </Animated.View>
@@ -1174,7 +1176,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     paddingTop: 8,
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: Platform.OS === 'ios' ? 100 : 100,
     maxHeight: height * 0.85,
   },
   handleBar: {

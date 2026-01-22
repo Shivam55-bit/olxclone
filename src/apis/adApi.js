@@ -100,11 +100,8 @@ export const createAd = async (adData) => {
         const res = await api.post('/ads/', adData);
         return res.data;
     } catch (error) {
-        const errorMessage = error.message || "Failed to create ad";
-        return { 
-            success: false, 
-            error: errorMessage 
-        };
+        // Throw the error instead of returning it so components can handle it properly
+        throw error;
     }
 };
 

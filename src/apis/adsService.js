@@ -2,8 +2,8 @@
 import api from "./api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Constants for AsyncStorage keys (should match api.js)
-const TOKEN_KEY = "token";
+// Constants for AsyncStorage keys (should match authApi.js)
+const TOKEN_KEY = "access_token";
 const TOKEN_TYPE_KEY = "token_type";
 
 // Helper function to safely retrieve auth details

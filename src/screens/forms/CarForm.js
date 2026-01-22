@@ -11,8 +11,10 @@ import {
   StatusBar,
   Image,
   Animated,
-  Alert, // <-- Imported Alert for error display
+  Alert,
+  KeyboardAvoidingView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
 import { launchImageLibrary } from "react-native-image-picker"; // Use launchImageLibrary
@@ -113,6 +115,17 @@ export default function CarForm({ route, navigation }) {
     const handleSubmit = async () => {
         const { title, price, brand, model, year, description, location, condition, mileage, features, photos, contact } = formData;
         
+        // --- 0. Check if user is logged in ---
+        try {
+            const token = await AsyncStorage.getItem("access_token");
+            if (!token) {
+                Alert.alert("Login Required", "You must be logged in to post an ad. Please login first.");
+                return;
+            }
+        } catch (e) {
+            console.error("Error checking login status:", e);
+        }
+        
         // --- 1. Client-Side Validation (Minimal check) ---
         let validationErrors = [];
         if (!title || title.length < 3) validationErrors.push("Title is required (min 3 characters).");
@@ -182,14 +195,17 @@ export default function CarForm({ route, navigation }) {
             console.log("Submitting Payload:", payload);
             
             // ⭐ CRITICAL FIX: CALL THE API
-            await createAd(payload); 
+            const response = await createAd(payload);
 
+            console.log("✅ Ad created successfully:", response);
             Alert.alert("Success", `${category.title} ad posted successfully! ✅`);
             navigation.goBack();
         } catch (error) {
-            console.error("API Request Failed:", error); 
+            console.error("❌ API Request Failed:", error); 
+            console.error("Error Response:", error.response?.data);
+            console.error("Error Message:", error.message);
             // The message here comes from the api.js interceptor
-            const errorMessage = error.message || "An unexpected error occurred while posting the ad.";
+            const errorMessage = error.response?.data?.message || error.response?.data?.detail || error.message || "An unexpected error occurred while posting the ad.";
             
             Alert.alert("Error Posting Ad", errorMessage);
         } finally {
@@ -200,7 +216,11 @@ export default function CarForm({ route, navigation }) {
     // ... (Rest of the rendering logic) ...
 
     return (
-        <View style={{ flex: 1, backgroundColor: "#f4f9f4" }}>
+        <KeyboardAvoidingView 
+            style={{ flex: 1, backgroundColor: "#f4f9f4" }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
             <StatusBar
                 translucent
                 backgroundColor="transparent"
@@ -384,7 +404,7 @@ export default function CarForm({ route, navigation }) {
                     </LinearGradient>
                 </TouchableOpacity>
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 

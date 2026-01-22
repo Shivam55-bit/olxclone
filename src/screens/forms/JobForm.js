@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  KeyboardAvoidingView,
   StatusBar,
   Switch,
   Animated,
@@ -234,7 +235,11 @@ export default function JobForm({ route, navigation }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#f9f9f9" }}>
+    <KeyboardAvoidingView 
+      style={{ flex: 1, backgroundColor: "#f9f9f9" }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
       <LinearGradient
@@ -305,7 +310,7 @@ export default function JobForm({ route, navigation }) {
           <Text style={styles.submitText}>{loading ? 'Posting...' : 'Post Job'}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

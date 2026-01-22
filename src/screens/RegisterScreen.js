@@ -129,6 +129,7 @@ const RegisterScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Full Name"
+                placeholderTextColor={'#666'}
                 value={fullName}
                 onChangeText={setFullName}
               />
@@ -140,6 +141,7 @@ const RegisterScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Username"
+                placeholderTextColor={'#666'}
                 value={username}
                 onChangeText={setUsername}
               />
@@ -151,6 +153,7 @@ const RegisterScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Email"
+                placeholderTextColor={'#666'}
                 keyboardType="email-address"
                 value={email}
                 onChangeText={setEmail}
@@ -163,6 +166,7 @@ const RegisterScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Mobile Number"
+                placeholderTextColor={'#666'}
                 keyboardType="number-pad"
                 maxLength={10}
                 value={mobileNumber}
@@ -176,6 +180,7 @@ const RegisterScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Password"
+                placeholderTextColor={'#666'}
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
@@ -188,6 +193,7 @@ const RegisterScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Confirm Password"
+                placeholderTextColor={'#666'}
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}

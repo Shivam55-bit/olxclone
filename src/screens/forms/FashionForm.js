@@ -13,6 +13,7 @@ import {
     StatusBar,
     Image,
     FlatList,
+    KeyboardAvoidingView,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
@@ -413,7 +414,11 @@ export default function FashionForm({ route, navigation }) {
 
 
     return (
-        <View style={{ flex: 1, backgroundColor: COLORS.white }}>
+        <KeyboardAvoidingView 
+            style={{ flex: 1, backgroundColor: COLORS.white }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
             <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
             {/* Header */}
@@ -512,7 +517,7 @@ export default function FashionForm({ route, navigation }) {
                     <Text style={formStyles.submitText}>{loading ? 'Saving Data...' : 'Post Ad'}</Text>
                 </TouchableOpacity>
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 

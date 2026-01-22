@@ -1,28 +1,77 @@
 import React from 'react';
-import { View, Text, StyleSheet, Linking, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Linking, TouchableOpacity, ScrollView } from 'react-native';
 
 const ContactUs = () => {
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Contact Us</Text>
-      <Text style={styles.text}>Have questions? Reach us at:</Text>
 
-      <TouchableOpacity onPress={() => Linking.openURL('mailto:support@example.com')}>
-        <Text style={styles.link}>support@example.com</Text>
-      </TouchableOpacity>
+      <Text style={styles.text}>
+        Need help with buying or selling a product?  
+        Our support team is here to assist you.
+      </Text>
 
-      <TouchableOpacity onPress={() => Linking.openURL('tel:+911234567890')}>
-        <Text style={styles.link}>+91 12345 67890</Text>
-      </TouchableOpacity>
-    </View>
+      <Text style={styles.subText}>
+        Feel free to reach out to us for any queries, issues, or feedback.
+      </Text>
+
+      <View style={styles.contactBox}>
+        <TouchableOpacity onPress={() => Linking.openURL('mailto:support@SellBuyTM.com')}>
+          <Text style={styles.link}>📧 support@SellBuyTM.com</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => Linking.openURL('tel:+911234567890')}>
+          <Text style={styles.link}>📞 +91 12345 67890</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.footerText}>
+        We usually respond within 24 hours.
+      </Text>
+    </ScrollView>
   );
 };
 
 export default ContactUs;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  text: { fontSize: 16, color: '#555', marginBottom: 10 },
-  link: { fontSize: 16, color: '#1976d2', marginTop: 5 },
+  container: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#2e7d32',
+  },
+  text: {
+    fontSize: 16,
+    color: '#444',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 22,
+  },
+  subText: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  contactBox: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  link: {
+    fontSize: 16,
+    color: '#1976d2',
+    marginVertical: 6,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#777',
+    textAlign: 'center',
+  },
 });

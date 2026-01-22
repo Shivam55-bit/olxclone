@@ -11,6 +11,7 @@ import {
     Animated,
     Alert, // 🔑 NEW: For user feedback
     Image, // 🔑 NEW: For photo preview
+    KeyboardAvoidingView,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
@@ -321,7 +322,11 @@ export default function ElectronicsForm({ route, navigation }) {
 
     // --- JSX Rendering ---
     return (
-        <View style={{ flex: 1, backgroundColor: "#f4f9f4" }}>
+        <KeyboardAvoidingView 
+            style={{ flex: 1, backgroundColor: "#f4f9f4" }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
             <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
             {/* Gradient Header */}
@@ -445,7 +450,7 @@ export default function ElectronicsForm({ route, navigation }) {
                     </LinearGradient>
                 </TouchableOpacity>
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 

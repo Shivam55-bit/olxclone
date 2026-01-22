@@ -12,6 +12,7 @@ import {
     Image, 
     Platform,
     StatusBar,
+    KeyboardAvoidingView,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
@@ -301,7 +302,11 @@ export default function CommercialVehicleForm({ route, navigation }) {
 
 
     return (
-        <View style={{ flex: 1, backgroundColor: "#fafafa" }}>
+        <KeyboardAvoidingView 
+            style={{ flex: 1, backgroundColor: "#fafafa" }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
             <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
             {/* Fixed Green Header */}
@@ -476,7 +481,7 @@ export default function CommercialVehicleForm({ route, navigation }) {
                     </LinearGradient>
                 </TouchableOpacity>
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 

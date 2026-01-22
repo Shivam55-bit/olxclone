@@ -12,7 +12,9 @@ import {
   Image,
   Animated,
   Alert,
+  KeyboardAvoidingView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
 import { launchImageLibrary } from "react-native-image-picker";
@@ -195,6 +197,17 @@ export default function SellMobileForm({ route, navigation }) {
   const handleSubmit = async () => {
     const { title, price, brand, model, description, location, condition, storage, ram, contact, features, photos } = formData;
 
+    // --- 0. Check if user is logged in ---
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      if (!token) {
+        Alert.alert("Login Required", "You must be logged in to post an ad. Please login first.");
+        return;
+      }
+    } catch (e) {
+      console.error("Error checking login status:", e);
+    }
+
     // --- 1. Client-Side Validation ---
     let validationErrors = [];
     if (!title || title.length < 3) validationErrors.push("Title is required (min 3 characters).");
@@ -264,13 +277,16 @@ export default function SellMobileForm({ route, navigation }) {
       // ⭐ CRITICAL FIX: CALL THE API
       const response = await createAd(payload); 
 
+      console.log("✅ Ad created successfully:", response);
       Alert.alert("Success", `${category.title} ad posted successfully! Ad ID: ${response?.ad_id || 'N/A'}`);
       // FIX: Navigate to a success screen or back to home
       navigation.goBack(); 
     } catch (error) {
-      console.error("API Request Failed:", error);
+      console.error("❌ API Request Failed:", error);
+      console.error("Error Response:", error.response?.data);
+      console.error("Error Message:", error.message);
       // FIX: Provide a more user-friendly error message
-      const apiErrorMessage = error.response?.data?.message || error.message || "An unexpected error occurred."; 
+      const apiErrorMessage = error.response?.data?.message || error.response?.data?.detail || error.message || "An unexpected error occurred."; 
       Alert.alert("Error Posting Ad", `Failed to create ad: ${apiErrorMessage}`);
     } finally {
       setLoading(false);
@@ -278,7 +294,11 @@ export default function SellMobileForm({ route, navigation }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#f9f9f9" }}>
+    <KeyboardAvoidingView 
+      style={{ flex: 1, backgroundColor: "#f9f9f9" }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
       {/* ✅ Gradient Header */}
@@ -432,7 +452,7 @@ export default function SellMobileForm({ route, navigation }) {
           <Text style={styles.submitText}>{loading ? 'Submitting...' : 'Post Ad'}</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

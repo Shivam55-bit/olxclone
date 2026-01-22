@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     },
     listContainer: {
         paddingHorizontal: 10,
-        paddingBottom: 20,
+        paddingBottom: 100,
     },
     loadingContainer: {
         flex: 1,

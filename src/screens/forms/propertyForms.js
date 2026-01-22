@@ -12,6 +12,7 @@ import {
     StatusBar,
     Image,
     FlatList,
+    KeyboardAvoidingView,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";

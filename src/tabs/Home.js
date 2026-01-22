@@ -736,7 +736,7 @@ const modalStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f5f5f5' },
-    flatListContent: { paddingBottom: 20 },
+    flatListContent: { paddingBottom: 100 },
     loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
     loaderText: { color: '#2e7d32', fontSize: 16, marginTop: 10, fontWeight: '600' },
     emptyContainer: {

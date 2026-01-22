@@ -9,6 +9,7 @@ import {
   Easing,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 /* ---------------- PARTICLE COMPONENT ---------------- */
 const Particle = ({ delay }) => {
@@ -173,8 +174,21 @@ const SplashScreen = ({ navigation }) => {
             duration: 1500,
             useNativeDriver: true,
           }).start(() => {
-            setTimeout(() => {
-              navigation.replace("LoginScreen");
+            setTimeout(async () => {
+              // Check if user has a valid token
+              try {
+                const accessToken = await AsyncStorage.getItem("access_token");
+                if (accessToken) {
+                  // User is logged in, go to HomeScreen
+                  navigation.replace("HomeScreen");
+                } else {
+                  // No token, go to LoginScreen
+                  navigation.replace("LoginScreen");
+                }
+              } catch (error) {
+                console.error("Error checking auth status:", error);
+                navigation.replace("LoginScreen");
+              }
             }, 1200);
           });
         });

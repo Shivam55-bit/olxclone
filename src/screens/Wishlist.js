@@ -193,7 +193,7 @@ const Wishlist = ({ navigation }) => {
                     <TouchableOpacity
                         style={styles.shopNowBtn}
                         // Assuming 'HomeScreen' is the correct target for the main tab
-                        onPress={() => navigation.navigate('Home')} 
+                        onPress={() => navigation.navigate('HomeScreen')} 
                     >
                         <Text style={styles.shopNowText}>Shop Now</Text>
                     </TouchableOpacity>

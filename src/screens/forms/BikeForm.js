@@ -10,6 +10,7 @@ import {
     Platform,
     Animated,
     Alert,
+    KeyboardAvoidingView,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
@@ -310,7 +311,11 @@ export default function BikeForm({ route, navigation }) {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: "#f4f9f4" }}>
+        <KeyboardAvoidingView 
+            style={{ flex: 1, backgroundColor: "#f4f9f4" }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
             <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
             <LinearGradient colors={["#43a047", "#1b5e20"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.headerContainer}>
                 <View style={styles.header}>
@@ -350,7 +355,7 @@ export default function BikeForm({ route, navigation }) {
                     </LinearGradient>
                 </TouchableOpacity>
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 
