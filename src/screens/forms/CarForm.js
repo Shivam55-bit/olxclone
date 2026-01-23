@@ -348,16 +348,42 @@ export default function CarForm({ route, navigation }) {
                 </TouchableOpacity>
                 <ScrollView horizontal style={{ marginTop: 10 }}>
                     {formData.photos.map((asset, idx) => (
-                        <Image
-                            key={idx}
-                            source={{ uri: asset.uri }}
-                            style={{
-                                width: 80,
-                                height: 80,
-                                borderRadius: 10,
-                                marginRight: 8,
-                            }}
-                        />
+                        <View key={idx} style={{ position: 'relative', marginRight: 8, }}>
+                            <Image
+                                source={{ uri: asset.uri }}
+                                style={{
+                                    width: 90,
+                                    height: 90,
+                                    borderRadius: 10,
+                                }}
+                            />
+                            <TouchableOpacity
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    right: -8,
+                                    backgroundColor: '#ff6b6b',
+                                    borderRadius: 50,
+                                    width: 28,
+                                    height: 28,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    elevation: 5,
+                                    shadowColor: '#000',
+                                    shadowOpacity: 0.3,
+                                    shadowRadius: 3,
+                                }}
+                                onPress={() => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        photos: prev.photos.filter((_, i) => i !== idx)
+                                    }));
+                                    
+                                }}
+                            >
+                                <Icon name="close" size={18} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
                     ))}
                 </ScrollView>
 

@@ -18,10 +18,32 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 // Assuming these are correctly imported and function:
 import { getProfile, deleteAccount } from "../apis/userApi";
 import { logoutUser } from "../apis/authApi"; 
+import { BASE_URL } from "../apis/api"; // ✅ Use the centralized BASE_URL
 
-// BASE_URL MUST match the one used in EditProfileScreen
-const BASE_URL = "https://bhoomi.dinahub.live";
 const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+/**
+ * Helper function to construct full image URL
+ * @param {string} imagePath - The image path from the backend (can be absolute URL or relative path)
+ * @returns {string} - Full absolute URL
+ */
+const getFullImageUrl = (imagePath) => {
+    if (!imagePath) return DEFAULT_AVATAR;
+    
+    const trimmedPath = imagePath.trim();
+    
+    // If it's already an absolute URL, return as-is
+    if (trimmedPath.startsWith("http")) {
+        return trimmedPath;
+    }
+    
+    // If it's a relative path, construct the full URL
+    // Remove leading slashes to avoid double slashes
+    const cleanedPath = trimmedPath.replace(/^\/+/, "");
+    const cleanedBase = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
+    
+    return `${cleanedBase}/${cleanedPath}`;
+};
 
 /* ----------------- Components ----------------- */
 
@@ -86,16 +108,14 @@ const User = () => {
             // 2. Process and fix avatar URL
             let finalAvatarUri = DEFAULT_AVATAR;
             if (userData.avatar) {
-                // Ensure a single slash separator and prepend BASE_URL if it's a relative path
-                let avatarPath = userData.avatar.replace(/^\/+|$\/+/, "");
-                if (!avatarPath.startsWith("http")) {
-                    finalAvatarUri = `${BASE_URL}/${avatarPath}`;
-                } else {
-                    finalAvatarUri = userData.avatar;
-                }
+                finalAvatarUri = getFullImageUrl(userData.avatar);
+                // 🔧 Add cache busting to force image reload
+                const cacheBuster = new Date().getTime();
+                finalAvatarUri = `${finalAvatarUri}?t=${cacheBuster}`;
             }
             // Update the dedicated avatar state
             setAvatarUri(finalAvatarUri);
+            console.log("🖼️ Avatar URI set to:", finalAvatarUri);
 
 
             // 3. Extract stats directly from the profile data
@@ -137,7 +157,7 @@ const User = () => {
 
     // **Handles Navigation to MyAdsScreen (or a screen displaying user's posts)**
     const handleMyAdsPress = () => {
-        navigation.navigate("MyAdds");
+        navigation.navigate("MyAds");
     };
 
     // **Handles Navigation to ConnectionsScreen**
@@ -283,6 +303,7 @@ const User = () => {
             >
                 <View style={styles.avatarBorder}>
                     <Image
+                        key={avatarUri}
                         source={{ uri: avatarUri }}
                         style={styles.avatar}
                         onError={() => {

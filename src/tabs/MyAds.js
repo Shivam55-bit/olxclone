@@ -19,7 +19,7 @@ import Icon from "react-native-vector-icons/Ionicons";
 import LinearGradient from "react-native-linear-gradient";
 import { useFocusEffect } from '@react-navigation/native';
 import { BASE_URL } from '../apis/api';
-import { getMyAds } from '../apis/adApi';
+import { getMyAds, updateAd } from '../apis/adApi';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,7 +34,7 @@ const COLORS = {
   cardDark: "#1A1D26",
   textPrimary: "#0A0E27",
   textSecondary: "#6B7280",
-  textTertiary: "#9CA3AF",
+  textTertiary: "#0c295b",
   textLight: "#FFFFFF",
   border: "#E5E7EB",
   borderLight: "#F3F4F6",
@@ -157,7 +157,7 @@ const AdCard = ({ item, onMenuPress, index }) => {
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.95}
-        onPress={() => console.log(`View Ad: ${item.id}`)}
+        onPress={() => { console.log(`View Ad: ${item.id}`) }}
       >
         {/* Premium Image Container with Gradient Overlay */}
         <View style={styles.imageContainer}>
@@ -242,7 +242,7 @@ const AdCard = ({ item, onMenuPress, index }) => {
 // -------------------------------------------------------------------
 // --- Modern Grid Action Menu with Card Design ---
 // -------------------------------------------------------------------
-const AdActionMenu = ({ ad, onClose, onEdit, onDelete, onPromote }) => {
+const AdActionMenu = ({ ad, onClose, onEdit, onDelete, onPromote, onMarkSold }) => {
   const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -314,7 +314,7 @@ const AdActionMenu = ({ ad, onClose, onEdit, onDelete, onPromote }) => {
     { 
       label: "Sold", 
       icon: "checkmark-done-outline", 
-      action: () => console.log('Mark as sold'),
+      action: onMarkSold,
       gradient: ["#3B82F6", "#60A5FA"],
       description: "Mark as sold"
     },
@@ -596,6 +596,34 @@ export default function MyAds({ navigation }) {
     Alert.alert("Promote Ad", `Promotion feature for "${ad.title}" is coming soon!`);
   };
 
+  const handleMarkSold = async (ad) => {
+    Alert.alert(
+      "Mark as Sold",
+      `Are you sure you want to mark "${ad.title}" as sold?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Mark as Sold",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              console.log(`📤 Marking ad ${ad.id} as sold...`);
+              const result = await updateAd(ad.id, { status: 'sold' });
+              console.log(`✅ Ad marked as sold:`, result);
+              Alert.alert("Success", `"${ad.title}" has been marked as sold!`);
+              // Refresh the ads list
+              fetchData();
+              handleCloseMenu();
+            } catch (error) {
+              console.error(`❌ Failed to mark ad as sold:`, error);
+              Alert.alert("Error", `Failed to mark ad as sold: ${error.message}`);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const TABS = ['All', 'Active', 'Pending', 'Sold'];
   const filteredAds = ads.filter(ad =>
     activeFilter === 'All' ? true : ad.status === activeFilter
@@ -766,6 +794,7 @@ export default function MyAds({ navigation }) {
           onEdit={handleEditAd}
           onDelete={handleDeleteAd}
           onPromote={handlePromoteAd}
+          onMarkSold={handleMarkSold}
         />
       )}
     </View>

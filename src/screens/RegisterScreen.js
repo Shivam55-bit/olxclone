@@ -116,7 +116,7 @@ const RegisterScreen = ({ navigation }) => {
   return (
     <Animated.View style={[styles.container, { backgroundColor: bgColor }]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scroll}>

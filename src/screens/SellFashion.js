@@ -30,7 +30,7 @@ const fashionCategories = [
     { id: "womens_wear", title: "Women's Clothing & Footwear", icon: "shoe-heel" },
     { id: "accessories", title: "Bags, Watches & Accessories", icon: "bag-personal-outline" },
     { id: "jewelry", title: "Jewelry & Precious Items", icon: "diamond-stone" },
-    { id: "kids_wear", title: "Kids/Baby Clothes & Gear", icon: "baby-carriage-outline" },
+    { id: "kids_wear", title: "Kids/Baby Clothes & Gear", icon: "baby-carriage" },
 ];
 
 export default function SellFashion({ navigation }) {

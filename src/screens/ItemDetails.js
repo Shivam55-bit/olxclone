@@ -27,6 +27,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useWishlist } from '../WishlistContext';
 import api, { BASE_URL } from '../apis/api';
 import RazorpayCheckout from 'react-native-razorpay';
+import { hasAdBeenViewed, markAdAsViewed } from '../utils/viewTracker';
 
 const { width, height } = Dimensions.get("window");
 
@@ -102,10 +103,16 @@ const updateOrderStatusApi = async (orderId, newStatus) => {
 
 const incrementAdViewApi = async (adId) => {
     try {
+        console.log(`[incrementAdViewApi] Starting view increment for ad: ${adId}`);
         const response = await api.post(`/ads/${adId}/view`);
+        
+        console.log(`[incrementAdViewApi] Response data:`, response.data);
+        console.log(`[incrementAdViewApi] Response status:`, response.status);
+        
         return response.data;
     } catch (error) {
-        console.error("Error in incrementAdViewApi:", error);
+        console.error("[incrementAdViewApi] Error:", error);
+        console.error("[incrementAdViewApi] Error response:", error.response?.data);
         throw error;
     }
 };
@@ -1776,7 +1783,8 @@ export default function ItemDetails() {
     }, [item?.user_id]);
 
     // Local state for views and likes
-    const [viewCount, setViewCount] = useState(item?.views || 0);
+    // Initialize with actual views from item, but don't reset on item change
+    const [viewCount, setViewCount] = useState(() => item?.views || 0);
     const [likeCount, setLikeCount] = useState(item?.likes || 0);
     const [isLiked, setIsLiked] = useState(false);
     const [isProcessingLike, setIsProcessingLike] = useState(false);
@@ -1784,6 +1792,9 @@ export default function ItemDetails() {
     // NEW: seller follow state & handler for improved seller UI
     const [sellerFollowing, setSellerFollowing] = useState(item?.seller_following || false);
     const [followLoading, setFollowLoading] = useState(false);
+    
+    // Track initial views separately so it doesn't reset
+    const initialViewsRef = useRef(item?.views || 0);
 
     // NEW: inline expanded seller profile toggle
     const [sellerExpanded, setSellerExpanded] = useState(false);
@@ -1797,19 +1808,38 @@ export default function ItemDetails() {
         dismissModal,
     } = usePaymentFlow(item);
 
-    // Increment view count when component mounts
+    // Increment view count when component mounts (only once per item)
     useEffect(() => {
         const incrementView = async () => {
             if (!itemId) return;
 
             try {
-                const response = await incrementAdViewApi(itemId);
-                if (response?.views !== undefined) {
-                    setViewCount(response.views);
-                } else {
-                    setViewCount(prev => prev + 1);
+                // Check if this ad has already been viewed by this user in this session
+                const alreadyViewed = await hasAdBeenViewed(itemId);
+                
+                if (alreadyViewed) {
+                    console.log(`Ad ${itemId} already viewed in this session - skipping view increment`);
+                    return;
                 }
-                console.log(`View count incremented for ad: ${itemId}`);
+
+                // Only increment if user hasn't viewed this ad yet
+                const response = await incrementAdViewApi(itemId);
+                
+                // Always use the response views count if available
+                if (response?.views !== undefined) {
+                    console.log(`View count from API: ${response.views} for ad: ${itemId}`);
+                    setViewCount(response.views);
+                } else if (response?.success) {
+                    // If success but no views field, increment locally
+                    setViewCount(prev => prev + 1);
+                } else {
+                    // If failed, don't change view count
+                    console.warn('View increment response was not successful:', response);
+                }
+                
+                // Mark this ad as viewed for the current session
+                await markAdAsViewed(itemId);
+                console.log(`View tracking recorded for ad: ${itemId}`);
             } catch (error) {
                 console.error('Failed to increment view:', error.message);
             }
@@ -1827,6 +1857,16 @@ export default function ItemDetails() {
             useNativeDriver: true,
         }).start();
     }, [priceCardScale]);
+
+    // Update viewCount ONLY if the item's views from props actually changed
+    // This prevents resetting to 0 when navigating back
+    useEffect(() => {
+        if (item?.views !== undefined && item.views > (initialViewsRef.current || 0)) {
+            console.log(`[ItemDetails] Updating viewCount from item.views: ${item.views}`);
+            setViewCount(item.views);
+            initialViewsRef.current = item.views;
+        }
+    }, [item?.views]);
 
     if (!item) {
         return (

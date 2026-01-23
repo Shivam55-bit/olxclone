@@ -222,7 +222,19 @@ const FloatingLabelInput = ({ label, value, onChangeText, keyboardType, multilin
 };
 
 export default function FashionForm({ route, navigation }) {
-    const { category } = route.params; 
+    const { category } = route?.params || {}; 
+    
+    // Safety check: If category is not provided, use a default or redirect
+    if (!category || !category.id) {
+        return (
+            <View style={formStyles.container}>
+                <Text style={{ textAlign: 'center', marginTop: 50, fontSize: 16, color: '#d32f2f' }}>
+                    Error: No category selected. Please go back and try again.
+                </Text>
+            </View>
+        );
+    }
+    
     const categoryKey = category.id.toLowerCase();
 
     const [loading, setLoading] = useState(false);

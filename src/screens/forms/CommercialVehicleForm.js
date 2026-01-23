@@ -441,7 +441,7 @@ export default function CommercialVehicleForm({ route, navigation }) {
                     label="Detailed Description of the vehicle"
                     value={formData.description}
                     onChangeText={(text) => handleChange("description", text)}
-                    icon="text-box-edit"
+                    icon="pencil-outline"
                     multiline
                     required
                 />

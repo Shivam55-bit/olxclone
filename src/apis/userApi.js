@@ -40,6 +40,7 @@ export const getProfile = async () => {
         const res = await api.get("/api/user/profile"); 
 
         const profile = Array.isArray(res.data) ? res.data[0] : res.data;
+        console.log("✅ getProfile response - avatar field:", profile?.avatar);
         return profile;
     } catch (error) {
         console.error("❌ getProfile API error:", error.response?.data || error.message);

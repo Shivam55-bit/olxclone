@@ -550,13 +550,13 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     photoImage: {
-        width: 80, 
-        height: 80, 
+        width: 90, 
+        height: 90, 
         borderRadius: 10,
     },
     removePhotoBtn: {
         position: 'absolute', 
-        top: -5, 
+        top: 0, 
         right: -5, 
         backgroundColor: 'rgba(255, 0, 0, 0.9)', 
         borderRadius: 10,

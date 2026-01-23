@@ -803,7 +803,7 @@ const styles = StyleSheet.create({
     },
     searchInput: { flex: 1, color: '#000', fontSize: 14, paddingVertical: 0 },
     iconButton: { paddingHorizontal: 10 },
-    badge: { position: 'absolute', top: -4, right: 4, backgroundColor: 'red', borderRadius: 10, paddingHorizontal: 5, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center' },
+    badge: { position: 'absolute', top: -6, right: 1, backgroundColor: 'red', borderRadius: 13, paddingHorizontal: 5, minWidth: 23, height: 18, justifyContent: 'center', alignItems: 'center' },
     badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 
     bannerContainer: { marginTop: 10, marginBottom: 10 },

@@ -57,22 +57,71 @@ export const WishlistProvider = ({ children }) => {
   const fetchWishlist = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Check if user is authenticated first
+      const token = await getAccessToken();
+      if (!token) {
+        console.log('[API] No token found. Skipping wishlist fetch.');
+        setWishlist([]);
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch(`${API_BASE_URL}favourites/`, {
         method: 'GET',
         headers: await getAuthHeaders(), // ⬅️ AWAIT the dynamic headers
       });
 
-      const data = await handleApiResponse(response);
-      setWishlist(Array.isArray(data) ? data : []);
-      console.log(`[API] Wishlist fetched successfully. Count: ${data.length}`);
+      const responseData = await handleApiResponse(response);
+      
+      // Extract items from API response { success, message, data: { favourites: [...], total_count } }
+      let items = [];
+      
+      if (Array.isArray(responseData)) {
+        items = responseData;
+      } else if (responseData?.data?.favourites && Array.isArray(responseData.data.favourites)) {
+        // API returns { data: { favourites: [...], total_count } }
+        // Each item has structure: { id, added_at, product: {...} }
+        // Normalize to use product data
+        items = responseData.data.favourites.map(fav => {
+          const product = fav.product || fav;
+          return {
+            _id: product.id || fav.id,
+            id: product.id || fav.id,
+            title: product.title,
+            description: product.description,
+            price: product.price,
+            condition: product.condition,
+            location: product.location,
+            is_available: product.is_available,
+            is_negotiable: product.is_negotiable,
+            views_count: product.views_count,
+            images: product.images || [],
+            image: product.images?.[0], // Use first image as main image
+            added_at: fav.added_at,
+          };
+        });
+        console.log('[DEBUG] Extracted from responseData.data.favourites');
+      } else if (responseData?.data && Array.isArray(responseData.data)) {
+        items = responseData.data;
+      }
+      
+      setWishlist(items);
+      console.log(`[API] Wishlist fetched successfully. Count: ${items.length}`);
     } catch (error) {
       console.error('Fetch Wishlist API Error:', error.message);
-      // Only show alert for non-network errors or if there's specific error handling needed
-      // For network/server errors (502, 503, etc.), just log it and continue with empty wishlist
-      if (!error.message.includes('502') && !error.message.includes('503') && !error.message.includes('Network')) {
-        Alert.alert('Error', 'Failed to load wishlist from server.');
+      // Silently handle 403 errors (not authenticated yet) - user will log in later
+      if (error.message.includes('403')) {
+        console.log('[API] User not authenticated yet. Wishlist will load after login.');
+        setWishlist([]);
+      } 
+      // Only show alert for other errors
+      else if (!error.message.includes('502') && !error.message.includes('503') && !error.message.includes('Network')) {
+        // Don't show alert, just log
+        console.warn('[API] Wishlist load failed (will retry on screen focus)');
+        setWishlist([]);
+      } else {
+        setWishlist([]);
       }
-      setWishlist([]);
     } finally {
       setIsLoading(false);
     }

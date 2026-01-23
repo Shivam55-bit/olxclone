@@ -66,19 +66,44 @@ export const getFavorites = async () => {
             headers: headers,
         });
 
-        const data = await handleApiResponse(response);
+        const responseData = await handleApiResponse(response);
+        
+        // Extract items from API response { data: { favourites: [...], total_count } }
+        let items = [];
+        
+        if (Array.isArray(responseData)) {
+            items = responseData;
+        } else if (responseData?.data?.favourites && Array.isArray(responseData.data.favourites)) {
+            // Normalize the data: { id, added_at, product: {...} } -> product data
+            items = responseData.data.favourites.map(fav => {
+                const product = fav.product || fav;
+                return {
+                    _id: product.id || fav.id,
+                    id: product.id || fav.id,
+                    title: product.title,
+                    description: product.description,
+                    price: product.price,
+                    condition: product.condition,
+                    location: product.location,
+                    is_available: product.is_available,
+                    is_negotiable: product.is_negotiable,
+                    views_count: product.views_count,
+                    images: product.images || [],
+                    image: product.images?.[0],
+                    added_at: fav.added_at,
+                };
+            });
+        } else if (responseData?.data && Array.isArray(responseData.data)) {
+            items = responseData.data;
+        }
         
         // Map data to include correct image URLs
-        if (Array.isArray(data)) {
-            return data.map(item => {
-                if (item?.image && !item.image.startsWith('http')) {
-                    return { ...item, image: `${IMAGE_BASE_URL}${item.image}` };
-                }
-                return item;
-            });
-        }
-
-        return data || [];
+        return items.map(item => {
+            if (item?.image && !item.image.startsWith('http')) {
+                return { ...item, image: `${IMAGE_BASE_URL}${item.image}` };
+            }
+            return item;
+        });
         
     } catch (error) {
         console.error('Fetch Favorites API Error:', error.message);

@@ -210,12 +210,19 @@ export const getTokenType = async () => {
 
 export const logout = async () => {
   try {
+    // Import and clear viewed ads when user logs out
+    const { clearViewedAds } = await import('../utils/viewTracker');
+    
     await AsyncStorage.multiRemove([
       "access_token",
       "refresh_token", 
       "token_type",
       "user_data"
     ]);
+    
+    // Clear viewed ads history for new session
+    await clearViewedAds();
+    
     console.log("✅ Logout successful - tokens cleared");
   } catch (error) {
     console.error("❌ Logout error:", error.message);

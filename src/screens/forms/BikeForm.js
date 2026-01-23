@@ -11,6 +11,7 @@ import {
     Animated,
     Alert,
     KeyboardAvoidingView,
+    Image,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import LinearGradient from "react-native-linear-gradient";
@@ -345,6 +346,47 @@ export default function BikeForm({ route, navigation }) {
                     <Icon name="camera-plus" size={22} color="#2e7d32" />
                     <Text style={styles.uploadText}>Upload Photos ({formData.mediaAssets.length} selected) *</Text>
                 </TouchableOpacity>
+
+                <ScrollView horizontal style={{ marginTop: 0 }}>
+                    {formData.mediaAssets.map((asset, idx) => (
+                        <View key={idx} style={{ position: 'relative', marginRight: 8,paddingBottom:10 }}>
+                                                    <Image
+                                                        source={{ uri: asset.uri }}
+                                                        style={{
+                                                            width: 90,
+                                                            height: 90,
+                                                            borderRadius: 10,
+                                                        }}
+                                                    />
+                                                    <TouchableOpacity
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            right: -8,
+                                                            backgroundColor: '#ff6b6b',
+                                                            borderRadius: 50,
+                                                            width: 28,
+                                                            height: 28,
+                                                            justifyContent: 'center',
+                                                            alignItems: 'center',
+                                                            elevation: 5,
+                                                            shadowColor: '#000',
+                                                            shadowOpacity: 0.3,
+                                                            shadowRadius: 3,
+                                                        }}
+                                                        onPress={() => {
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                photos: prev.photos.filter((_, i) => i !== idx)
+                                                            }));
+                                                            
+                                                        }}
+                                                    >
+                                                        <Icon name="close" size={18} color="#fff" />
+                                                    </TouchableOpacity>
+                                                </View>
+                    ))}
+                </ScrollView>
 
                 <FloatingLabelInput label="Description" value={formData.description} onChangeText={(t) => handleChange("description", t)} multiline icon="note-text" maxLength={2000} required />
                 <FloatingLabelInput label="Contact Number / Email" value={formData.contact} onChangeText={(t) => handleChange("contact", t)} keyboardType="email-address" icon="account" />

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  SafeAreaView,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
@@ -45,6 +46,7 @@ export default function HomeScreen() {
   }, [pulseAnim]);
 
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" ,paddingBottom:10 }}>
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
@@ -111,6 +113,7 @@ export default function HomeScreen() {
       <Tab.Screen name="MyAds" component={MyAds} />
       <Tab.Screen name="Account" component={User} />
     </Tab.Navigator>
+    </SafeAreaView>
   );
 }
 

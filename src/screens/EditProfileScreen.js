@@ -20,9 +20,30 @@ import DefaultAvatar from "../images/user_placeholder.png";
 
 // Import APIs
 import { getProfile, updateProfile, uploadAvatar } from "../apis/userApi";
+import { BASE_URL } from "../apis/api"; // ✅ Use the centralized BASE_URL
 
-// Assuming your profile links are relative to this BASE_URL
-const BASE_URL = "https://bhoomi.dinahub.live";
+/**
+ * Helper function to construct full image URL
+ * @param {string} imagePath - The image path from the backend (can be absolute URL or relative path)
+ * @returns {string} - Full absolute URL
+ */
+const getFullImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    
+    const trimmedPath = imagePath.trim();
+    
+    // If it's already an absolute URL, return as-is
+    if (trimmedPath.startsWith("http")) {
+        return trimmedPath;
+    }
+    
+    // If it's a relative path, construct the full URL
+    // Remove leading slashes to avoid double slashes
+    const cleanedPath = trimmedPath.replace(/^\/+/, "");
+    const cleanedBase = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
+    
+    return `${cleanedBase}/${cleanedPath}`;
+};
 
 export default function EditProfileScreen({ navigation }) {
   const [profile, setProfile] = useState({
@@ -53,15 +74,7 @@ export default function EditProfileScreen({ navigation }) {
       });
 
       if (data.avatar) {
-        let avatarUrl = data.avatar.trim();
-
-        // ✅ URL Cleaning: Ensure the path is correctly prepended with BASE_URL if it's relative
-        if (!avatarUrl.startsWith("http")) {
-          // Removes leading slash from path to prevent duplicates like //uploads/
-          const cleanedPath = avatarUrl.replace(/^\/+/, ""); 
-          avatarUrl = `${BASE_URL}/${cleanedPath}`;
-        }
-
+        const avatarUrl = getFullImageUrl(data.avatar);
         setAvatar(avatarUrl);
       } else {
         setAvatar(null); // Set to null if no avatar is available
@@ -133,22 +146,22 @@ export default function EditProfileScreen({ navigation }) {
       if (newAvatarSelected) {
         // We know 'avatar' state holds the full Base64 string
         console.log("📤 Attempting avatar upload...");
+        console.log("🔍 Avatar data length:", avatar?.length || "no data");
         
         // 🔑 FIX: Pass the FULL Base64 string, which is already in the 'avatar' state.
         const res = await uploadAvatar(avatar); // <-- Pass the full string
         
-        // Update the URL state after successful upload
-        if (res?.avatar_url) {
-          let uploadedUrl = res.avatar_url.trim();
-          if (!uploadedUrl.startsWith("http")) {
-            const cleanedPath = uploadedUrl.replace(/^\/+/, "");
-            uploadedUrl = `${BASE_URL}/${cleanedPath}`;
-          }
-          setAvatar(uploadedUrl); // Update to the new public URL
+        console.log("✅ Avatar upload response:", res);
+        console.log("📦 Response keys:", Object.keys(res || {}));
+        
+        // Check if upload was successful
+        if (res?.avatar) {
           setNewAvatarSelected(false); // Reset selection flag
-          console.log("✅ Avatar uploaded and URL updated:", uploadedUrl);
+          console.log("✅ Avatar uploaded successfully. Path:", res.avatar);
+          // Don't try to preview the URL here - let the Account tab fetch fresh data
         } else {
-            console.warn("⚠️ Avatar upload succeeded but returned no URL.");
+            console.warn("⚠️ Avatar upload succeeded but returned no avatar path. Response:", res);
+            throw new Error("Avatar upload failed - no path returned");
         }
       }
 

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
     View,
     Text,
@@ -10,6 +10,7 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useWishlist } from '../WishlistContext'; // Adjust path as needed
 
 // 🔑 CRITICAL FIX: Import BASE_URL from the central API file 
@@ -37,10 +38,25 @@ const Wishlist = ({ navigation }) => {
         wishlist,
         isLoading,
         removeFromWishlist,
+        fetchWishlist,
     } = useWishlist();
 
     const fadeAnims = useRef({}).current;
     const [imageErrors, setImageErrors] = useState({});
+
+    // 🔥 LOAD WISHLIST IMMEDIATELY ON MOUNT
+    useEffect(() => {
+        console.log('[Wishlist Screen] Mounted - fetching wishlist');
+        fetchWishlist();
+    }, [fetchWishlist]);
+
+    // 🔥 REFRESH WISHLIST WHEN SCREEN COMES INTO FOCUS
+    useFocusEffect(
+        useCallback(() => {
+            console.log('[Wishlist Screen] Screen focused - refreshing wishlist');
+            fetchWishlist();
+        }, [fetchWishlist])
+    );
 
     // Utility to ensure we have an Animated.Value for every item
     const getFadeAnim = (id) => {
@@ -193,7 +209,7 @@ const Wishlist = ({ navigation }) => {
                     <TouchableOpacity
                         style={styles.shopNowBtn}
                         // Assuming 'HomeScreen' is the correct target for the main tab
-                        onPress={() => navigation.navigate('HomeScreen')} 
+                        onPress={() => navigation.goBack()} 
                     >
                         <Text style={styles.shopNowText}>Shop Now</Text>
                     </TouchableOpacity>

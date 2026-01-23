@@ -626,8 +626,8 @@ const styles = StyleSheet.create({
     },
     removeMediaButton: {
         position: 'absolute',
-        top: -5,
-        right: -5,
+        top: 0,
+        right: 0,
         backgroundColor: COLORS.white, 
         borderRadius: 12,
         padding: 2,

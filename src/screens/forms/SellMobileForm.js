@@ -407,7 +407,7 @@ export default function SellMobileForm({ route, navigation }) {
             <TouchableOpacity key={idx} onPress={() => removePhoto(idx)} style={{ marginRight: 8 }}>
               <Image
                 source={{ uri: asset.uri }}
-                style={{ width: 80, height: 80, borderRadius: 10 }}
+                style={{ width: 90, height: 90, borderRadius: 10 }}
               />
               {/* Add a small 'x' button for removal feedback */}
               <View style={styles.removePhotoBtn}>
@@ -554,8 +554,8 @@ const styles = StyleSheet.create({
   },
   removePhotoBtn: {
     position: 'absolute',
-    top: -5,
-    right: -5,
+    top: 0,
+    right: 0,
     backgroundColor: 'white',
     borderRadius: 10,
   },

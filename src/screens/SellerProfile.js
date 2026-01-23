@@ -48,7 +48,7 @@ export default function SellerProfile() {
 
         const avatarUri = profile.avatar?.startsWith('http')
             ? profile.avatar
-            : `${BASE_URL.replace(/\/$/, '')}/${profile.avatar}`;
+            : `${BASE_URL.replace(/\/$/, '')}${profile.avatar ? '/' + profile.avatar.replace(/^\/+|\/+$/, '') : ''}`;
 
         return (
             <View style={styles.headerContainer}>
@@ -128,7 +128,7 @@ export default function SellerProfile() {
         <TouchableOpacity
             style={styles.adCard}
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('ItemDetails', { itemId: item.id })}
+            onPress={() => navigation.navigate('ItemDetails', { item: item })}
         >
             <View style={styles.adImageContainer}>
                 <Image
