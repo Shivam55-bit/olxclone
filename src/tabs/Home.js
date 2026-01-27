@@ -24,7 +24,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useWishlist } from '../WishlistContext';
 // ⚠️ Dhyan Dein: Yeh APIs sirf example ke liye hain, asali mein aapko inhe apne backend se badalna hoga.
 import { getTopPicks, getNearbyItems, getFollowingItems } from '../apis/homeApi'; 
-import { BASE_URL } from '../apis/api'; 
+import { BASE_URL } from '../apis/api';
+import { requestLocationPermission, getCurrentLocation } from '../utils/locationService';
+import { getCityFromCoordinates } from '../utils/reverseGeocoding'; 
 
 const { width } = Dimensions.get('window');
 
@@ -69,6 +71,7 @@ const banners = [
 function LocationSelectorModal({ visible, onClose, onSelect }) {
     const [searchText, setSearchText] = useState('');
     const [filteredLocations, setFilteredLocations] = useState(mockLocations);
+    const [gettingLocation, setGettingLocation] = useState(false);
 
     useEffect(() => {
         if (visible) {
@@ -94,10 +97,31 @@ function LocationSelectorModal({ visible, onClose, onSelect }) {
         onSelect(location);
     };
 
-    const handleUseCurrentLocation = () => {
+    const handleUseCurrentLocation = async () => {
         Keyboard.dismiss();
-        const currentLocation = mockLocations.find(loc => loc.id === '9');
-        onSelect(currentLocation); 
+        setGettingLocation(true);
+        try {
+            const permissionGranted = await requestLocationPermission();
+            if (permissionGranted) {
+                const currentCoords = await getCurrentLocation();
+                console.log('✅ Location from modal:', currentCoords);
+                
+                // 🏙️ Get city name from coordinates
+                const cityName = await getCityFromCoordinates(currentCoords.latitude, currentCoords.longitude);
+                
+                onSelect({
+                    id: '9',
+                    name: cityName,
+                    value: cityName,
+                    lat: currentCoords.latitude,
+                    lon: currentCoords.longitude,
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error getting location:', error);
+        } finally {
+            setGettingLocation(false);
+        }
     };
 
     return (
@@ -130,17 +154,31 @@ function LocationSelectorModal({ visible, onClose, onSelect }) {
                             </TouchableOpacity>
                         )}
                     </View>
-
                     {/* Current Location Button */}
                     <TouchableOpacity 
                         style={modalStyles.currentLocationButton}
                         onPress={handleUseCurrentLocation}
+                        disabled={gettingLocation}
+                        activeOpacity={0.8}
                     >
-                        <Ionicons name="locate-sharp" size={24} color="#fff" />
-                        <Text style={modalStyles.currentLocationText}>
-                            Use Current Location (GPS)
-                        </Text>
-                        <MIcon name="chevron-right" size={24} color="#fff" />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                            {gettingLocation ? (
+                                <>
+                                    <ActivityIndicator size="small" color="#fff" />
+                                    <Text style={[modalStyles.currentLocationText, { marginLeft: 8 }]}>
+                                        Getting Location...
+                                    </Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Ionicons name="locate-sharp" size={24} color="#fff" />
+                                    <Text style={modalStyles.currentLocationText}>
+                                        Use Current Location (GPS)
+                                    </Text>
+                                    <MIcon name="chevron-right" size={24} color="#fff" />
+                                </>
+                            )}
+                        </View>
                     </TouchableOpacity>
 
                     <Text style={modalStyles.popularTitle}>Popular Locations</Text>
@@ -270,6 +308,7 @@ export default function Home() {
     const [isFetching, setIsFetching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [displayedItems, setDisplayedItems] = useState([]);
+    const [userLocation, setUserLocation] = useState(null);
     
     const [activeFilter, setActiveFilter] = useState("Top Picks"); 
     
@@ -346,6 +385,31 @@ export default function Home() {
             };
         }, [fetchItems, activeFilter, coords, loading])
     );
+
+    // 📍 Request location permission and get current location on mount
+    useEffect(() => {
+        const initializeLocation = async () => {
+            try {
+                const permissionGranted = await requestLocationPermission();
+                if (permissionGranted) {
+                    const currentCoords = await getCurrentLocation();
+                    console.log('✅ Current location obtained:', currentCoords);
+                    setUserLocation(currentCoords);
+                    setCoords({ lat: currentCoords.latitude, lon: currentCoords.longitude });
+                    
+                    // 🏙️ Get city name from coordinates using reverse geocoding
+                    const cityName = await getCityFromCoordinates(currentCoords.latitude, currentCoords.longitude);
+                    setSelectedLocation(cityName);
+                } else {
+                    console.log('⚠️ Location permission denied, using default location');
+                }
+            } catch (error) {
+                console.error('❌ Error initializing location:', error);
+            }
+        };
+
+        initializeLocation();
+    }, []);
 
 
     const applyFilter = async (filter) => {

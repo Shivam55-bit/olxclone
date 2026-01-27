@@ -45,7 +45,10 @@ export default function SellCategories({ navigation }) {
     <Animated.View
       entering={FadeInDown.delay(index * 80).duration(500)}
       // Removed 'flex: 1' here and applied fixed dimensions in styles.
-      style={styles.categoryItemWrapper} 
+      style={[
+        styles.categoryItemWrapper,
+        item.id === 8 && styles.fashionCardWrapper, // Increase width for Fashion card only
+      ]}
     >
       <TouchableOpacity
         style={styles.categoryCard}
@@ -168,6 +171,10 @@ const styles = StyleSheet.create({
     // Added margin to the right only for the first column to create the gap
     marginRight: COLUMN_GAP, 
     width: CARD_SIZE, // Explicitly set width to the calculated size
+  },
+
+  fashionCardWrapper: {
+    width: width - HORIZONTAL_PADDING * 2, // Full width minus padding for Fashion card
   },
 
   categoryCard: {

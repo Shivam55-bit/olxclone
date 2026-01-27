@@ -19,6 +19,7 @@ import LinearGradient from "react-native-linear-gradient";
 import Toast from "react-native-toast-message";
 // Assuming 'login' function is correctly imported and uses POST method internally
 import { login } from "../apis/authApi"; // Updated path for this example
+import { useWishlist } from "../WishlistContext"; // 🔑 Import wishlist context
 
 const { width, height } = Dimensions.get("window");
 
@@ -107,6 +108,7 @@ const FloatingLabelInput = ({
 
 const LoginScreen = () => {
   const navigation = useNavigation();
+  const { resetWishlist } = useWishlist(); // 🔑 Get resetWishlist function
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -186,6 +188,10 @@ const LoginScreen = () => {
       if (res && res.access_token) {
         // Here you would save the access_token and refresh_token (e.g., using AsyncStorage)
         Toast.show({ type: "success", text1: "🎉 Login Successful", text2: `Welcome back!` });
+        
+        // 🔑 Reset wishlist after login to fetch fresh data
+        resetWishlist();
+        
         // Navigate to the next screen after a short delay for the toast to show
         setTimeout(() => navigation.replace("HomeScreen"), 1000);
       } else {

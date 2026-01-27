@@ -52,6 +52,7 @@ const handleApiResponse = async (response) => {
 export const WishlistProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasFetched, setHasFetched] = useState(false);
 
   // --- 1. FETCH INITIAL WISHLIST (GET) ---
   const fetchWishlist = useCallback(async () => {
@@ -221,10 +222,22 @@ export const WishlistProvider = ({ children }) => {
     [wishlist]
   );
 
-  // --- 5. LIFECYCLE ---
+  // --- 5. LIFECYCLE - Auto-fetch wishlist on mount ---
   useEffect(() => {
+    if (!hasFetched) {
+      console.log('[WISHLIST] Auto-fetching wishlist on app startup...');
+      fetchWishlist();
+      setHasFetched(true);
+    }
+  }, []);
+
+  // --- 6. RESET FLAG (for re-fetching after login) ---
+  const resetWishlist = useCallback(() => {
+    console.log('[WISHLIST] Resetting wishlist (new login detected)');
+    setHasFetched(false);
+    setWishlist([]);
     fetchWishlist();
-  }, [fetchWishlist]);
+  }, []);
 
   return (
     <WishlistContext.Provider
@@ -235,7 +248,7 @@ export const WishlistProvider = ({ children }) => {
         isInWishlist,
         isLoading,
         fetchWishlist,
-        
+        resetWishlist,
       }}
     >
       {children}
