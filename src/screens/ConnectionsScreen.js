@@ -17,7 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, useDerivedValue } from 'react-native-reanimated';
 
 // 🔑 Import the API functions
-import { fetchFollowers, fetchFollowing } from '../apis/followApi'; 
+import { fetchFollowers, fetchFollowing } from '../apis/followApi';
+import { BASE_URL } from '../apis/api'; 
 
 // 🚨 CONCEPTUAL: Haptic Feedback Utility (Requires a separate library for real implementation)
 const HapticFeedback = {
@@ -115,8 +116,12 @@ const useConnections = () => {
             const mapUserData = (apiData) => apiData.map(user => ({
                 id: user.id.toString(), 
                 name: user.name || user.username || 'User',
-                // Assuming profile_image is the correct URL property
-                avatar: user.avatar ? `https://bhoomi.dinahub.live${user.avatar}` : `https://i.pravatar.cc/150?u=${user.id}`, // ✅ IMPROVEMENT: Prepending base URL to relative path
+                // ✅ FIX: Use BASE_URL for avatar images
+                avatar: user.avatar 
+                    ? (user.avatar.startsWith('http') ? user.avatar : `${BASE_URL}${user.avatar}`)
+                    : (user.profile_image 
+                        ? (user.profile_image.startsWith('http') ? user.profile_image : `${BASE_URL}${user.profile_image}`)
+                        : `https://i.pravatar.cc/150?u=${user.id}`),
                 mutuals: Math.floor(Math.random() * 5), 
             }));
 
@@ -145,12 +150,15 @@ const useConnections = () => {
 };
 
 
-// 👤 Simplified User Card Component (Display-Only)
-const UserCard = memo(({ user }) => (
+// 👤 Simplified User Card Component with Navigation to SellerProfile
+const UserCard = memo(({ user, navigation }) => (
   <TouchableOpacity 
     style={styles.userCard} 
     activeOpacity={0.7} 
-    onPress={() => HapticFeedback.impact('light')}
+    onPress={() => {
+      HapticFeedback.impact('light');
+      navigation.navigate('SellerProfile', { userId: user.id });
+    }}
   >
     <Image 
         source={{ uri: user.avatar }} 
@@ -250,9 +258,17 @@ const ScreenHeader = memo(({ activeTab, onTabChange, searchQuery, setSearchQuery
 
 
 // 🖥️ Main Screen Component
-const ConnectionsScreen = () => {
+const ConnectionsScreen = ({ route }) => {
   const { followers, following, isLoading, error } = useConnections();
-  const [activeTab, setActiveTab] = useState(TABS.FOLLOWING);
+  
+  // Get initialTab from route params and convert to correct format
+  const getInitialTab = () => {
+    const initialTab = route?.params?.initialTab;
+    if (initialTab === 'Followers') return TABS.FOLLOWERS;
+    return TABS.FOLLOWING; // Default to Following
+  };
+  
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation(); 
   
@@ -267,8 +283,8 @@ const ConnectionsScreen = () => {
   }, [searchQuery, activeTab, followers, following]);
 
   const renderUserItem = useCallback(
-    ({ item }) => <UserCard user={item} />,
-    [] 
+    ({ item }) => <UserCard user={item} navigation={navigation} />,
+    [navigation] 
   );
 
   if (error) {
@@ -367,7 +383,7 @@ const styles = StyleSheet.create({
   },
   tabButton: { flex: 1, justifyContent: 'center', alignItems: 'center', zIndex: 1 },
   tabText: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.8)' },
-  tabActiveText: { color: theme.colors.white }, 
+  tabActiveText: { color: '#000000', fontWeight: '700' ,fontSize: 18}, 
   tabIndicator: {
     position: 'absolute',
     height: '90%',

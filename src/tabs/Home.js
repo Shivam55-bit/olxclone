@@ -318,6 +318,7 @@ export default function Home() {
 
     const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
     const originalItemsRef = useRef([]);
+    const isSearching = searchQuery.trim().length > 0;
 
     const handleLocationSelect = useCallback((locationObject) => {
         setSelectedLocation(locationObject.name);
@@ -458,7 +459,8 @@ export default function Home() {
                 </View>
             );
         }
-
+        
+        
         const isSearchEmpty = searchQuery.trim().length > 0;
         const emptyMessage = isSearchEmpty
             ? `No results found for "${searchQuery.trim()}".`
@@ -536,69 +538,70 @@ export default function Home() {
                 ListFooterComponent={<View style={{ height: 20 }} />}
                 contentContainerStyle={styles.flatListContent}
                 ListHeaderComponent={
-                    <View key="home-header">
-                        <BannerSlider />
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Browse by Categories</Text>
-                            <FlatList
-                                data={categories}
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                keyExtractor={(item) => item.id}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        style={styles.categoryItem}
-                                        onPress={() => navigation.navigate('Search', { category: item.label })}
-                                    >
-                                        <View style={styles.categoryIconWrapper}>
-                                            <Image source={item.icon} style={styles.categoryImage} />
-                                        </View>
-                                        <Text style={styles.categoryText}>{item.label}</Text>
-                                    </TouchableOpacity>
-                                )}
-                            />
-                        </View>
+  isSearching ? null : (
+    <View key="home-header">
+      <BannerSlider />
 
-                        {/* 🔹 Filter Bar */}
-                        <View style={styles.filterBarContainer}>
-                            <View style={styles.filterWrapper}>
-                                {["Top Picks", "Nearby", "Following"].map((filter) => (
-                                    <TouchableOpacity
-                                        key={filter}
-                                        style={styles.filterTab}
-                                        onPress={() => applyFilter(filter)}
-                                        disabled={isFetching}
-                                    >
-                                        <Text style={[styles.filterLabel, activeFilter === filter && styles.filterLabelActive]}>
-                                            {filter}
-                                        </Text>
-                                        {activeFilter === filter && <View style={styles.activeIndicator} />}
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Browse by Categories</Text>
+        <FlatList
+          data={categories}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.categoryItem}
+              onPress={() => navigation.navigate('Search', { category: item.label })}
+            >
+              <View style={styles.categoryIconWrapper}>
+                <Image source={item.icon} style={styles.categoryImage} />
+              </View>
+              <Text style={styles.categoryText}>{item.label}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
 
-                        <View style={styles.sectionTitleWrapper}>
-                            {/* 🔑 UPDATED: Show location name for Nearby section */}
-                            {activeFilter === "Nearby" && (
-                                <Text style={styles.nearbyLocationTitle}>
-                                     <Text style={styles.nearbyTitle}>{selectedLocation}</Text>
-                                </Text>
-                            )}
-                            {activeFilter === "Following" && (
-                               
-                                     <Text style={styles.followingTitle}>✨Following</Text>
-                               
-                            )}
+      {/* Filter Bar */}
+      <View style={styles.filterBarContainer}>
+        <View style={styles.filterWrapper}>
+          {["Top Picks", "Nearby", "Following"].map((filter) => (
+            <TouchableOpacity
+              key={filter}
+              style={styles.filterTab}
+              onPress={() => applyFilter(filter)}
+              disabled={isFetching}
+            >
+              <Text style={[
+                styles.filterLabel,
+                activeFilter === filter && styles.filterLabelActive
+              ]}>
+                {filter}
+              </Text>
+              {activeFilter === filter && <View style={styles.activeIndicator} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
-                            
-                            {/* 🔑 UPDATED: Show "Fresh recommendations" ONLY for Top Picks */}
-                            {activeFilter === "Top Picks" && displayedItems.length > 0 && (
-                                <Text style={styles.sectionTitle}>✨ Fresh recommendations</Text>
-                            )}
-                        </View>
-                    </View>
-                }
+      <View style={styles.sectionTitleWrapper}>
+        {activeFilter === "Nearby" && (
+          <Text style={styles.nearbyTitle}>{selectedLocation}</Text>
+        )}
+
+        {activeFilter === "Following" && (
+          <Text style={styles.followingTitle}>✨ Following</Text>
+        )}
+
+        {activeFilter === "Top Picks" && displayedItems.length > 0 && (
+          <Text style={styles.sectionTitle}>✨ Fresh recommendations</Text>
+        )}
+      </View>
+    </View>
+  )
+}
+
 
                 renderItem={({ item }) => {
                     // --- Image Logic ---

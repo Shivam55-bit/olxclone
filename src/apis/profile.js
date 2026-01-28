@@ -2,16 +2,18 @@
 import api from "./api";
 
 // Assuming the update endpoint is correctly /api/profile/update or similar
-const PROFILE_UPDATE_ENDPOINT = "/api/profile/update"; 
-const PROFILE_GET_ENDPOINT = "/api/profile"; 
+const PROFILE_UPDATE_ENDPOINT = "/api/user/profile"; 
+const PROFILE_GET_ENDPOINT = "/api/user/profile"; 
 
 // Get user profile
 export const getProfile = async () => {
     try {
-        // Use the full endpoint path if /profile doesn't work directly
+        // Use the full endpoint path
         const res = await api.get(PROFILE_GET_ENDPOINT); 
         console.log("✅ Profile API response:", res.data);
-        return res.data;
+        // Handle both array and object responses
+        const profile = Array.isArray(res.data) ? res.data[0] : res.data;
+        return profile;
     } catch (err) {
         console.error("❌ Profile API error:", err.response?.data || err.message);
         throw err;

@@ -22,8 +22,8 @@ import LinearGradient from 'react-native-linear-gradient';
 
 // Import your API functions
 import { BASE_URL } from '../apis/api';
-// 🔑 Import the new updateAd function
-import { updateAd } from '../apis/adApi'; 
+// 🔑 Import the updateAd and uploadAdImages functions
+import { updateAd, uploadAdImages } from '../apis/adApi'; 
 
 const { width } = Dimensions.get('window');
 
@@ -262,46 +262,68 @@ export default function EditAd({ route, navigation }) {
         try {
             setSaving(true);
             
-            // 1. Prepare FormData for text data and new images
-            const formData = new FormData();
-
-            // Append text data fields
-            formData.append('title', title.trim());
-            formData.append('description', description.trim());
-            formData.append('price', parseFloat(price));
-            formData.append('location', location.trim());
-            formData.append('condition', condition);
-            formData.append('status', status.toLowerCase());
-            
-            // 2. Append existing image paths for the server to keep
-            // This is crucial. We must map the full URLs back to the server's expected path format.
+            // Get existing image paths (relative paths for the server)
+            // existingImages might be full URLs or already relative paths
             const keptImagePaths = existingImages.map(url => {
-                 // Try to remove BASE_URL to get the path the server originally stored
-                 return url.replace(BASE_URL, '').replace(/^\/+/, ''); // Clean up leading slashes
-            }).filter(path => path); // Filter out any empty paths
-            
-            // IMPORTANT: API dependent. Assuming your API accepts an array of paths or a JSON string of paths
-            formData.append('kept_images', JSON.stringify(keptImagePaths));
+                if (!url) return null;
+                // If it's already a relative path (doesn't start with http)
+                if (!url.startsWith('http')) {
+                    return url.replace(/^\/+/, ''); // Just clean leading slashes
+                }
+                // Remove BASE_URL to get the relative path
+                let path = url.replace(BASE_URL, '');
+                // Also try without trailing slash variants
+                path = path.replace(/^\/+/, ''); // Remove leading slashes
+                return path || null;
+            }).filter(path => path && path.length > 0);
 
-            // 3. Append new images (Assets)
-            images.forEach((image, index) => {
-                // Determine file type and name for the upload
-                const fileType = image.type || 'image/jpeg';
-                const fileName = image.fileName || `ad_image_${adId}_${Date.now()}_${index}.jpg`;
+            console.log('📷 Existing images (full URLs):', existingImages);
+            console.log('📷 Kept image paths (relative):', keptImagePaths);
+
+            // Start with existing images
+            let allImagePaths = [...keptImagePaths];
+
+            // Upload NEW images first if any
+            if (images.length > 0) {
+                console.log('📤 Uploading', images.length, 'new images...');
                 
-                // Append the file using the correct structure for multipart/form-data
-                // The 'images' field name must match your backend's expected array field name (e.g., 'files' or 'images')
-                formData.append('images', { 
-                    uri: image.uri,
-                    name: fileName,
-                    type: fileType,
-                });
-            });
+                const uploadResult = await uploadAdImages(images);
+                console.log('📥 Upload result:', JSON.stringify(uploadResult, null, 2));
+                
+                if (uploadResult.success && uploadResult.paths && uploadResult.paths.length > 0) {
+                    // paths are already extracted as strings in uploadAdImages
+                    allImagePaths = [...allImagePaths, ...uploadResult.paths];
+                    console.log('✅ All image paths after adding new:', allImagePaths);
+                } else {
+                    // Show raw response for debugging if paths extraction failed
+                    console.log('⚠️ Raw upload response:', JSON.stringify(uploadResult.raw, null, 2));
+                    Alert.alert("Error", uploadResult.error || "Failed to upload new images - no paths returned");
+                    setSaving(false);
+                    return;
+                }
+            }
 
-            // 4. API call using the centralized updateAd function
-            const result = await updateAd(adId, formData);
+            console.log('📷 Final all image paths to save:', allImagePaths);
 
-            if (result.success) {
+            // Build the JSON payload matching API schema
+            const updatePayload = {
+                title: title.trim(),
+                description: description.trim(),
+                price: parseFloat(price),
+                location: location.trim(),
+                condition: condition.toLowerCase(),
+                status: status.toLowerCase(),
+                images: allImagePaths, // Array of string paths
+            };
+
+            console.log('📤 Sending update payload:', JSON.stringify(updatePayload, null, 2));
+
+            // API call using the centralized updateAd function (sends JSON)
+            const result = await updateAd(adId, updatePayload);
+
+            console.log('📥 Update result:', result);
+
+            if (result && !result.error && result.success !== false) {
                 Alert.alert(
                     "Success! 🎉", 
                     "Your ad has been updated successfully!", 

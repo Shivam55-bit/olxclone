@@ -108,12 +108,29 @@ export const createAd = async (adData) => {
 /**
  * Update existing ad
  * Endpoint: PUT /ads/{ad_id}
+ * 
+ * Matches curl:
+ * curl -X 'PUT' 'https://olx.fixsservices.com/ads/{ad_id}'
+ * -H 'Authorization: Bearer <token>'
+ * -H 'Content-Type: application/json'
+ * -d '{ "price": 9000 }'
  */
 export const updateAd = async (ad_id, adData) => {
     try {
-        const res = await api.put(`/ads/${ad_id}`, adData);
+        // Determine if data is FormData (for file uploads) or plain JSON
+        const isFormData = adData instanceof FormData;
+        
+        const config = {
+            headers: {
+                'Content-Type': isFormData ? 'multipart/form-data' : 'application/json',
+                'Accept': 'application/json',
+            }
+        };
+
+        const res = await api.put(`/ads/${ad_id}`, adData, config);
         return res.data;
     } catch (error) {
+        console.error('❌ updateAd Error:', error.response?.data || error.message);
         const errorMessage = error.message || "Failed to update ad";
         return { 
             success: false, 
@@ -195,6 +212,88 @@ export const getAdsByUser = async (user_id, page = 1, size = 20) => {
         },
     };
     return handleAuthRequest(endpoint, options);
+};
+
+/**
+ * Upload ad images
+ * Endpoint: POST /uploads/ad-images
+ * 
+ * @param {Array} images - Array of image objects with { uri, type, fileName }
+ * @returns {Object} - { success: true, paths: [...] } or { success: false, error: '...' }
+ */
+export const uploadAdImages = async (images) => {
+    try {
+        const formData = new FormData();
+        
+        images.forEach((image, index) => {
+            const fileType = image.type || 'image/jpeg';
+            const fileName = image.fileName || `ad_image_${Date.now()}_${index}.jpg`;
+            
+            formData.append('files', {
+                uri: image.uri,
+                name: fileName,
+                type: fileType,
+            });
+        });
+
+        console.log('📤 Uploading images...', images.length, 'files');
+        
+        const res = await api.post('/uploads/ad-images', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+
+        // Log the full response to debug
+        console.log('✅ Image upload RAW response:', JSON.stringify(res.data, null, 2));
+        
+        // Extract paths from response - handle various API response formats
+        let extractedPaths = [];
+        const data = res.data;
+        
+        if (Array.isArray(data)) {
+            // Response is directly an array
+            extractedPaths = data;
+        } else if (data.paths && Array.isArray(data.paths)) {
+            extractedPaths = data.paths;
+        } else if (data.images && Array.isArray(data.images)) {
+            extractedPaths = data.images;
+        } else if (data.files && Array.isArray(data.files)) {
+            extractedPaths = data.files;
+        } else if (data.uploaded && Array.isArray(data.uploaded)) {
+            extractedPaths = data.uploaded;
+        } else if (typeof data === 'object') {
+            // Try to get first array property
+            const arrayProp = Object.values(data).find(v => Array.isArray(v));
+            if (arrayProp) extractedPaths = arrayProp;
+        }
+
+        // Convert objects to string paths if needed
+        const stringPaths = extractedPaths.map(item => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item === 'object') {
+                // Try common property names for file paths
+                return item.path || item.url || item.file_path || item.filepath || 
+                       item.filename || item.file || item.image || item.location || null;
+            }
+            return null;
+        }).filter(p => p !== null && typeof p === 'string');
+
+        console.log('✅ Extracted string paths:', stringPaths);
+        
+        return {
+            success: true,
+            paths: stringPaths,
+            raw: data, // Include raw for debugging
+        };
+    } catch (error) {
+        console.error('❌ Image upload error:', error.response?.data || error.message);
+        const errorMessage = error.message || "Failed to upload images";
+        return {
+            success: false,
+            error: errorMessage,
+        };
+    }
 };
 
 // You can add other ad-related endpoints here (e.g., postAd, deleteAd, etc.)

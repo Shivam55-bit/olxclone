@@ -61,20 +61,30 @@ export const fetchFollowing = async () => {
 // Follow a user
 export const followUser = async (userId) => {
   try {
-    const res = await api.post("/follow/follow", { user_id: userId });
+    const res = await api.post("/follow/follow", { user_to_follow_id: userId });
     return { success: true, data: res.data };
   } catch (error) {
     return { success: false, error: error.response?.data?.message || 'Failed to follow user.' };
   }
 };
 
-// Unfollow a user
+// Unfollow a user - POST /follow/unfollow/{user_id}
 export const unfollowUser = async (userId) => {
   try {
     const res = await api.post(`/follow/unfollow/${userId}`);
     return { success: true, data: res.data };
   } catch (error) {
     return { success: false, error: error.response?.data?.message || 'Failed to unfollow user.' };
+  }
+};
+
+// Get user profile
+export const getUserProfile = async () => {
+  try {
+    const res = await api.get("/api/user/profile");
+    return { success: true, data: res.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.message || 'Failed to fetch user profile.' };
   }
 };
 
@@ -85,5 +95,26 @@ export const getFollowStats = async () => {
     return { success: true, data: res.data };
   } catch (error) {
     return { success: false, error: error.response?.data?.message || 'Failed to get stats.' };
+  }
+};
+
+/**
+ * Check if current user is following a specific user
+ * @param {string} userId - The user ID to check
+ * @returns {object} { success: boolean, isFollowing: boolean }
+ */
+export const checkFollowStatus = async (userId) => {
+  try {
+    const res = await api.get('/follow/following');
+    // API response: { success, message, data: { following: [...] } }
+    const followingList = res.data?.data?.following || [];
+    
+    // Check if userId is in the following list
+    const isFollowing = followingList.some(user => user?.id === userId);
+    
+    return { success: true, isFollowing };
+  } catch (error) {
+    console.error('Check follow status error:', error);
+    return { success: false, isFollowing: false, error: error.message };
   }
 };

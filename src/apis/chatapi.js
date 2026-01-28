@@ -2,14 +2,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 // ✅ FIXED: Import BASE_URL for consistency
 import { BASE_URL } from './api';
+// ✅ FIXED: Import getAccessToken from authApi for correct token retrieval
+import { getAccessToken } from './authApi';
 
 // Messages endpoint base
 const MESSAGES_BASE = '/api/messages/';
 
-// Get auth token from AsyncStorage
+// Get auth token from AsyncStorage - using the correct key 'access_token'
 const getAuthToken = async () => {
   try {
-    const token = await AsyncStorage.getItem('authToken');
+    const token = await getAccessToken();
     return token;
   } catch (error) {
     console.error('Error getting auth token:', error);
@@ -19,17 +21,38 @@ const getAuthToken = async () => {
 
 /**
  * API Endpoint 1: Send a message (POST /api/messages/)
+ * Based on curl:
+ * POST https://olx.fixsservices.com/api/messages/
+ * Body: { "content": "string", "product_id": "string", "receiver_id": "string" }
  */
-export const sendMessage = async (content, receiverId, productId = null) => {
+export const sendMessage = async (content, receiverId, productId) => {
   try {
+    console.log('📤 Sending message:', { content, receiverId, productId });
+    
+    if (!content) {
+      throw new Error('Content is required');
+    }
+    if (!receiverId) {
+      throw new Error('receiverId is required');
+    }
+    if (!productId) {
+      throw new Error('productId is required');
+    }
+    
     const token = await getAuthToken();
+    
+    // All fields are required strings
+    const body = {
+      content: String(content),
+      product_id: String(productId),
+      receiver_id: String(receiverId),
+    };
+    
+    console.log('📤 Request body:', body);
+    
     const response = await axios.post(
       `${BASE_URL}${MESSAGES_BASE}`,
-      {
-        content,
-        receiver_id: receiverId,
-        product_id: productId,
-      },
+      body,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -40,7 +63,9 @@ export const sendMessage = async (content, receiverId, productId = null) => {
     );
     return response.data;
   } catch (error) {
-    console.error('Error sending message:', error);
+    console.error('❌ REST Send Message Error:', error.message || error);
+    console.error('❌ Error Response:', error.response?.data);
+    console.error('❌ Error Status:', error.response?.status);
     throw error;
   }
 };
@@ -51,7 +76,7 @@ export const sendMessage = async (content, receiverId, productId = null) => {
 export const getMessage = async (messageId) => {
   try {
     const token = await getAuthToken();
-    const response = await axios.get(`${BASE_URL}${messageId}`, {
+    const response = await axios.get(`${BASE_URL}${MESSAGES_BASE}${messageId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'accept': 'application/json',
@@ -70,7 +95,7 @@ export const getMessage = async (messageId) => {
 export const deleteMessage = async (messageId) => {
   try {
     const token = await getAuthToken();
-    const response = await axios.delete(`${BASE_URL}${messageId}`, {
+    const response = await axios.delete(`${BASE_URL}${MESSAGES_BASE}${messageId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'accept': 'application/json',
@@ -92,7 +117,7 @@ export const fetchMessages = async (userId1, userId2, skip = 0, limit = 50) => {
     const skipNum = Number(skip);
     const limitNum = Number(limit);
     const response = await axios.get(
-      `${BASE_URL}conversation/${userId1}/${userId2}?skip=${skipNum}&limit=${limitNum}`,
+      `${BASE_URL}${MESSAGES_BASE}conversation/${userId1}/${userId2}?skip=${skipNum}&limit=${limitNum}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -108,25 +133,29 @@ export const fetchMessages = async (userId1, userId2, skip = 0, limit = 50) => {
 };
 
 /**
- * API Endpoint 5: Get all conversations
+ * API Endpoint 5: Get all chat users
+ * curl: GET https://olx.fixsservices.com/api/messages/chat-users/
  */
 export const getChatUsers = async (skip = 0, limit = 20) => {
   try {
     const token = await getAuthToken();
-    const skipNum = Number(skip);
-    const limitNum = Number(limit);
-    const response = await axios.get(
-      `${BASE_URL}conversations/?skip=${skipNum}&limit=${limitNum}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'accept': 'application/json',
-        },
-      }
-    );
+    console.log('🔑 Token for getChatUsers:', token ? 'Token exists' : 'No token');
+    
+    const url = `${BASE_URL}${MESSAGES_BASE}chat-users/`;
+    console.log('📡 Fetching chat users from:', url);
+    
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'accept': 'application/json',
+      },
+    });
+    console.log('✅ Chat users response:', JSON.stringify(response.data, null, 2));
     return response.data;
   } catch (error) {
-    console.error('Error fetching conversations:', error);
+    console.error('❌ Error fetching chat users:', error.message);
+    console.error('❌ Error response:', error.response?.data);
+    console.error('❌ Error status:', error.response?.status);
     throw error;
   }
 };
@@ -138,7 +167,7 @@ export const markMessageAsRead = async (messageId) => {
   try {
     const token = await getAuthToken();
     const response = await axios.put(
-      `${BASE_URL}${messageId}/read`,
+      `${BASE_URL}${MESSAGES_BASE}${messageId}/read`,
       {},
       {
         headers: {
@@ -161,7 +190,7 @@ export const markConversationAsRead = async (userId1, userId2) => {
   try {
     const token = await getAuthToken();
     const response = await axios.put(
-      `${BASE_URL}conversation/${userId1}/${userId2}/read`,
+      `${BASE_URL}${MESSAGES_BASE}conversation/${userId1}/${userId2}/read`,
       {},
       {
         headers: {
@@ -183,7 +212,7 @@ export const markConversationAsRead = async (userId1, userId2) => {
 export const getUnreadCount = async () => {
   try {
     const token = await getAuthToken();
-    const response = await axios.get(`${BASE_URL}unread/count`, {
+    const response = await axios.get(`${BASE_URL}${MESSAGES_BASE}unread/count`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'accept': 'application/json',
@@ -205,7 +234,7 @@ export const getProductMessages = async (productId, skip = 0, limit = 50) => {
     const skipNum = Number(skip);
     const limitNum = Number(limit);
     const response = await axios.get(
-      `${BASE_URL}product/${productId}?skip=${skipNum}&limit=${limitNum}`,
+      `${BASE_URL}${MESSAGES_BASE}product/${productId}?skip=${skipNum}&limit=${limitNum}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -229,7 +258,7 @@ export const searchMessages = async (query, skip = 0, limit = 50) => {
     const skipNum = Number(skip);
     const limitNum = Number(limit);
     const response = await axios.get(
-      `${BASE_URL}search/?q=${encodeURIComponent(query)}&skip=${skipNum}&limit=${limitNum}`,
+      `${BASE_URL}${MESSAGES_BASE}search/?q=${encodeURIComponent(query)}&skip=${skipNum}&limit=${limitNum}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -250,7 +279,7 @@ export const searchMessages = async (query, skip = 0, limit = 50) => {
 export const getChatUsersList = async () => {
   try {
     const token = await getAuthToken();
-    const response = await axios.get(`${BASE_URL}chat-users/`, {
+    const response = await axios.get(`${BASE_URL}${MESSAGES_BASE}chat-users/`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'accept': 'application/json',
@@ -264,25 +293,30 @@ export const getChatUsersList = async () => {
 };
 
 /**
- * API Endpoint 12: Get conversation with a specific user
+ * API Endpoint 12: Get conversation with a specific user for a product
+ * curl: GET /api/messages/conversation/{otherUserId}/{productId}?skip=0&limit=50
  */
-export const getConversationWith = async (userId, skip = 0, limit = 50) => {
+export const getConversationWith = async (otherUserId, productId, skip = 0, limit = 50) => {
   try {
     const token = await getAuthToken();
     const skipNum = Number(skip);
     const limitNum = Number(limit);
-    const response = await axios.get(
-      `${BASE_URL}conversation-with/${userId}?skip=${skipNum}&limit=${limitNum}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'accept': 'application/json',
-        },
-      }
-    );
+    
+    // Use conversation endpoint with other user ID and product ID
+    const url = `${BASE_URL}${MESSAGES_BASE}conversation/${otherUserId}/${productId}?skip=${skipNum}&limit=${limitNum}`;
+    console.log('📡 Fetching conversation from:', url);
+    
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'accept': 'application/json',
+      },
+    });
+    console.log('✅ Conversation response:', JSON.stringify(response.data, null, 2));
     return response.data;
   } catch (error) {
-    console.error('Error fetching conversation:', error);
+    console.error('❌ Error fetching conversation:', error.message);
+    console.error('❌ Error response:', error.response?.data);
     throw error;
   }
 };
@@ -295,7 +329,7 @@ export const getNewMessages = async (userId, since) => {
     const token = await getAuthToken();
     const sinceNum = Number(since);
     const response = await axios.get(
-      `${BASE_URL}new-messages/${userId}?since=${sinceNum}`,
+      `${BASE_URL}${MESSAGES_BASE}new-messages/${userId}?since=${sinceNum}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

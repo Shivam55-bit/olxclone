@@ -14,6 +14,7 @@ import {
   Alert,
   Animated,
   ScrollView,
+  TextInput,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import LinearGradient from "react-native-linear-gradient";
@@ -179,7 +180,7 @@ const AdCard = ({ item, onMenuPress, index }) => {
               end={{ x: 1, y: 1 }}
               style={styles.priceTagGradient}
             >
-              <Text style={styles.priceText}>₹{item.price || '0'}</Text>
+              <Text style={styles.priceText}>₹{Number(item.price || 0).toLocaleString()}</Text>
             </LinearGradient>
           </View>
 
@@ -242,7 +243,7 @@ const AdCard = ({ item, onMenuPress, index }) => {
 // -------------------------------------------------------------------
 // --- Modern Grid Action Menu with Card Design ---
 // -------------------------------------------------------------------
-const AdActionMenu = ({ ad, onClose, onEdit, onDelete, onPromote, onMarkSold }) => {
+const AdActionMenu = ({ ad, onClose, onEdit, onDelete, onPromote, onMarkSold, onUpdatePrice }) => {
   const slideAnim = useRef(new Animated.Value(height)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -296,6 +297,13 @@ const AdActionMenu = ({ ad, onClose, onEdit, onDelete, onPromote, onMarkSold }) 
       action: onEdit,
       gradient: ["#369a3bff", "#4ccb52ff"],
       description: "Modify details"
+    },
+    { 
+      label: "Price", 
+      icon: "pricetag-outline", 
+      action: onUpdatePrice,
+      gradient: ["#10B981", "#34D399"],
+      description: "Update price"
     },
     { 
       label: "Promote", 
@@ -373,7 +381,7 @@ const AdActionMenu = ({ ad, onClose, onEdit, onDelete, onPromote, onMarkSold }) 
             />
             <View style={styles.adPreviewContent}>
               <Text style={styles.adPreviewTitle} numberOfLines={1}>{ad.title}</Text>
-              <Text style={styles.adPreviewPrice}>₹{ad.price}</Text>
+              <Text style={styles.adPreviewPrice}>₹{Number(ad.price).toLocaleString()}</Text>
               <View style={styles.adPreviewMeta}>
                 <Icon name="eye-outline" size={14} color={COLORS.textTertiary} />
                 <Text style={styles.adPreviewMetaText}>{ad.views} views</Text>
@@ -517,6 +525,12 @@ export default function MyAds({ navigation }) {
   const [activeFilter, setActiveFilter] = useState('All');
   const [selectedAd, setSelectedAd] = useState(null);
   const headerAnim = useRef(new Animated.Value(0)).current;
+  
+  // Price Update Modal State
+  const [priceModalVisible, setPriceModalVisible] = useState(false);
+  const [priceModalAd, setPriceModalAd] = useState(null);
+  const [newPriceInput, setNewPriceInput] = useState('');
+  const [updatingPrice, setUpdatingPrice] = useState(false);
 
   useEffect(() => {
     Animated.timing(headerAnim, {
@@ -542,10 +556,11 @@ export default function MyAds({ navigation }) {
       }
 
       const rawAds = apiData.items || [];
+      console.log('📥 Raw ads from API:', JSON.stringify(rawAds.slice(0, 2), null, 2)); // Log first 2 ads
       const mappedAds = rawAds.map(ad => ({
         id: ad.id || ad._id,
         title: ad.title || 'Untitled Listing',
-        price: ad.price != null ? ad.price.toString() : '0',
+        price: ad.price != null ? ad.price : 0, // Keep as number for display
         imageUrl: (ad.images && ad.images.length > 0 && ad.images[0])
           ? `${BASE_URL}${ad.images[0].startsWith('/') ? ad.images[0] : '/' + ad.images[0]}`
           : null,
@@ -559,6 +574,7 @@ export default function MyAds({ navigation }) {
         date: ad.created_at ? new Date(ad.created_at).toLocaleDateString() : 'N/A',
       }));
 
+      console.log('✅ Mapped ads:', mappedAds.map(a => ({ id: a.id, title: a.title, price: a.price })));
       setAds(mappedAds);
     } catch (err) {
       setError("Could not connect to the ad server. Check network or server status.");
@@ -622,6 +638,64 @@ export default function MyAds({ navigation }) {
         }
       ]
     );
+  };
+
+  // 🔑 Update Ad Price - Opens modal for cross-platform support
+  // Implements the curl: PUT /ads/{ad_id} with { price: newPrice }
+  const handleUpdatePrice = (ad) => {
+    setPriceModalAd(ad);
+    setNewPriceInput(ad.price?.toString() || '');
+    setPriceModalVisible(true);
+    handleCloseMenu();
+  };
+
+  // Submit price update
+  const submitPriceUpdate = async () => {
+    if (!priceModalAd) return;
+    
+    const priceValue = parseFloat(newPriceInput);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      Alert.alert("Invalid Price", "Please enter a valid price greater than 0");
+      return;
+    }
+
+    try {
+      setUpdatingPrice(true);
+      console.log(`📤 Updating price for ad ${priceModalAd.id} to ${priceValue}...`);
+      
+      // This matches the curl: PUT /ads/{ad_id} with JSON body { price: 9000 }
+      const result = await updateAd(priceModalAd.id, { price: priceValue });
+      console.log(`✅ Price updated response:`, JSON.stringify(result, null, 2));
+      
+      if (result.success !== false && !result.error) {
+        // Close modal first
+        setPriceModalVisible(false);
+        setPriceModalAd(null);
+        setNewPriceInput('');
+        
+        // Show success message
+        Alert.alert("Success", `Price updated to Rs ${priceValue.toLocaleString()}!`);
+        
+        // Add small delay before refresh to allow backend to update
+        setTimeout(() => {
+          setLoading(true); // Show loading indicator
+          fetchData(); // Refresh the ads list
+        }, 500);
+      } else {
+        Alert.alert("Error", result.error || "Failed to update price");
+      }
+    } catch (error) {
+      console.error(`❌ Failed to update price:`, error);
+      Alert.alert("Error", `Failed to update price: ${error.message}`);
+    } finally {
+      setUpdatingPrice(false);
+    }
+  };
+
+  const closePriceModal = () => {
+    setPriceModalVisible(false);
+    setPriceModalAd(null);
+    setNewPriceInput('');
   };
 
   const TABS = ['All', 'Active', 'Pending', 'Sold'];
@@ -795,8 +869,57 @@ export default function MyAds({ navigation }) {
           onDelete={handleDeleteAd}
           onPromote={handlePromoteAd}
           onMarkSold={handleMarkSold}
+          onUpdatePrice={handleUpdatePrice}
         />
       )}
+
+      {/* Price Update Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={priceModalVisible}
+        onRequestClose={closePriceModal}
+      >
+        <View style={styles.priceModalOverlay}>
+          <View style={styles.priceModalContainer}>
+            <Text style={styles.priceModalTitle}>Update Price</Text>
+            {priceModalAd && (
+              <Text style={styles.priceModalSubtitle}>
+                {priceModalAd.title}
+              </Text>
+            )}
+            <TextInput
+              style={styles.priceInput}
+              placeholder="Enter new price"
+              placeholderTextColor={COLORS.textMuted}
+              keyboardType="numeric"
+              value={newPriceInput}
+              onChangeText={setNewPriceInput}
+              autoFocus={true}
+            />
+            <View style={styles.priceModalButtons}>
+              <TouchableOpacity 
+                style={[styles.priceModalBtn, styles.priceModalCancelBtn]}
+                onPress={closePriceModal}
+                disabled={updatingPrice}
+              >
+                <Text style={styles.priceModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.priceModalBtn, styles.priceModalUpdateBtn]}
+                onPress={submitPriceUpdate}
+                disabled={updatingPrice}
+              >
+                {updatingPrice ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.priceModalUpdateText}>Update</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1365,5 +1488,81 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.textPrimary,
+  },
+  // Price Update Modal Styles
+  priceModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  priceModalContainer: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  priceModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  priceModalSubtitle: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  priceInput: {
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    backgroundColor: COLORS.background,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  priceModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  priceModalBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  priceModalCancelBtn: {
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  priceModalUpdateBtn: {
+    backgroundColor: COLORS.accent,
+  },
+  priceModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  priceModalUpdateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

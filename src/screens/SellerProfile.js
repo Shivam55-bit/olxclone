@@ -4,6 +4,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import api, { BASE_URL } from '../apis/api';
+import { checkFollowStatus } from '../apis/followApi';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width / 2) - 30; // 15 padding on each side for the ad card
@@ -17,27 +18,49 @@ export default function SellerProfile() {
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
 
-    useEffect(() => {
-        async function fetchProfile() {
-            setLoading(true);
-            try {
-                const res = await api.get(`/api/user/${userId}/profile-full`);
-                setProfile(res.data);
-                setIsFollowing(res.data?.is_following || false);
-            } catch (e) {
-                setProfile(null);
+    // Function to fetch profile and follow status
+    const fetchProfileData = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get(`/api/user/${userId}/profile-full`);
+            setProfile(res.data);
+            
+            // Check follow status from the following list API
+            const followStatus = await checkFollowStatus(userId);
+            if (followStatus.success) {
+                setIsFollowing(followStatus.isFollowing);
             }
-            setLoading(false);
+        } catch (e) {
+            setProfile(null);
         }
-        if (userId) fetchProfile();
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        if (userId) fetchProfileData();
     }, [userId]);
 
     const handleFollow = async () => {
         setFollowLoading(true);
         try {
-            await api.post(`/api/user/${userId}/${isFollowing ? 'unfollow' : 'follow'}`);
-            setIsFollowing(!isFollowing);
-        } catch (e) {}
+            if (isFollowing) {
+                // Unfollow: POST /follow/unfollow/{user_id}
+                console.log('📤 Unfollowing user:', userId);
+                const res = await api.post(`/follow/unfollow/${userId}`);
+                console.log('✅ Unfollow response:', res.data);
+            } else {
+                // Follow: POST /follow/follow with body
+                console.log('📤 Following user:', userId);
+                const res = await api.post('/follow/follow', { user_to_follow_id: userId });
+                console.log('✅ Follow response:', res.data);
+            }
+            
+            // Refresh the page data after follow/unfollow
+            await fetchProfileData();
+            
+        } catch (e) {
+            console.error('❌ Follow/Unfollow error:', e.response?.data || e.message);
+        }
         setFollowLoading(false);
     };
 

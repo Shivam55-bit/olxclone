@@ -18,8 +18,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import ChatApi from '../apis/chatapi';
+import { BASE_URL } from '../apis/api';
 
-const IMAGE_BASE_URL = 'https://bhoomi.dinahub.live/';
+const IMAGE_BASE_URL = BASE_URL;
 
 // Dummy data for testing when API fails
 const DUMMY_CHATS = [
@@ -86,47 +87,89 @@ const ChatScreen = ({ navigation }) => {
     setLoading(true);
     setError(null);
     
-    // Load saved chat list from AsyncStorage
+    // Fetch chat users from API
     try {
-      const chatListKey = 'chat_users_list';
-      const savedChatList = await AsyncStorage.getItem(chatListKey);
+      const response = await ChatApi.getChatUsers();
+      console.log('📥 Raw Chat Users API response:', JSON.stringify(response, null, 2));
       
-      if (savedChatList) {
-        const allChats = JSON.parse(savedChatList);
-        // Filter: only show chats that have at least one message
-        const chatsWithMessages = [];
-        
-        for (const chat of allChats) {
-          const messagesKey = `chat_messages_${chat.user_id || chat.id}`;
-          const messages = await AsyncStorage.getItem(messagesKey);
+      // Handle response structure: { status: "success", data: [...] } OR direct array OR { chat_users: [...] }
+      let chatUsersList = [];
+      if (response?.data && Array.isArray(response.data)) {
+        chatUsersList = response.data;
+      } else if (Array.isArray(response)) {
+        chatUsersList = response;
+      } else if (response?.chat_users && Array.isArray(response.chat_users)) {
+        chatUsersList = response.chat_users;
+      } else if (response?.data?.chat_users && Array.isArray(response.data.chat_users)) {
+        chatUsersList = response.data.chat_users;
+      } else if (response?.users && Array.isArray(response.users)) {
+        chatUsersList = response.users;
+      }
+      
+      console.log('📋 Parsed chat users count:', chatUsersList.length);
+      
+      if (chatUsersList.length > 0) {
+        // Map API response to expected format
+        // API format: { user_id, name, avatar, last_message: { id, content, created_at, sender_id, receiver_id } }
+        const mappedChats = chatUsersList.map(user => {
+          console.log('📝 Mapping chat user:', JSON.stringify(user, null, 2));
           
-          if (messages && JSON.parse(messages).length > 0) {
-            chatsWithMessages.push(chat);
+          // Extract user info - exact API field names
+          const userId = user.user_id || user.id || user._id;
+          const userName = user.name || user.username || 'User';
+          
+          // Avatar - API returns relative path like "uploads/avatars/..."
+          // Need to prepend BASE_URL
+          let userAvatar = user.avatar || user.profile_picture || user.profile_image;
+          if (userAvatar && !userAvatar.startsWith('http')) {
+            userAvatar = `${IMAGE_BASE_URL}/${userAvatar}`;
           }
-        }
-        
-        setChatUsers(chatsWithMessages);
+          
+          // Last message - object with content, created_at, sender_id, receiver_id
+          const lastMessageContent = user.last_message?.content || 'Start a conversation';
+          const lastMessageTime = user.last_message?.created_at || user.updated_at;
+          
+          return {
+            user_id: userId,
+            name: userName,
+            avatar: userAvatar,
+            online: user.is_online || false,
+            last_message: {
+              content: lastMessageContent,
+              created_at: lastMessageTime,
+              sender_id: user.last_message?.sender_id,
+              receiver_id: user.last_message?.receiver_id,
+              id: user.last_message?.id,
+            },
+            unread_count: user.unread_count || 0,
+            conversation_id: user.conversation_id || `conv_${userId}`,
+            product_id: user.product_id || user.last_message?.product_id,
+            last_message_id: user.last_message?.id,
+          };
+        });
+        console.log('✅ Mapped chats:', JSON.stringify(mappedChats, null, 2));
+        setChatUsers(mappedChats);
       } else {
+        console.log('⚠️ No conversations found');
         setChatUsers([]);
       }
     } catch (err) {
-      console.log("Error loading chats:", err);
-      setChatUsers([]);
+      console.error("❌ Error fetching conversations:", err);
+      // Fallback to AsyncStorage if API fails
+      try {
+        const chatListKey = 'chat_users_list';
+        const savedChatList = await AsyncStorage.getItem(chatListKey);
+        if (savedChatList) {
+          setChatUsers(JSON.parse(savedChatList));
+        } else {
+          setChatUsers([]);
+        }
+      } catch (storageErr) {
+        setChatUsers([]);
+      }
     } finally {
       setLoading(false);
     }
-    
-    /* Uncomment when backend is ready:
-    try {
-      const conversations = await ChatApi.getChatUsers(0, 20);
-      setChatUsers(conversations && conversations.length > 0 ? conversations : []);
-    } catch (err) {
-      console.log("API not available");
-      setChatUsers([]);
-    } finally {
-      setLoading(false);
-    }
-    */
   };
 
   const formatTime = (timestamp) => {
@@ -143,6 +186,13 @@ const ChatScreen = ({ navigation }) => {
     user.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Helper to get proper avatar URL
+  const getAvatarUrl = (avatar) => {
+    if (!avatar) return 'https://i.pravatar.cc/150?u=default';
+    if (avatar.startsWith('http')) return avatar;
+    return `${IMAGE_BASE_URL}${avatar}`;
+  };
+
   const renderChatUser = ({ item, index }) => (
     <Animatable.View animation="fadeInUp" delay={index * 80} useNativeDriver>
       <TouchableOpacity
@@ -153,15 +203,16 @@ const ChatScreen = ({ navigation }) => {
             conversationId: item.conversation_id || item.user_id || 'temp-conv-' + item.user_id, 
             receiverId: item.user_id,
             name: item.name,
-            avatar: `${IMAGE_BASE_URL}${item.avatar}`,
+            avatar: getAvatarUrl(item.avatar),
             online: item.online,
-            productId: item.product_id || null, 
+            productId: item.product_id || null,
+            lastMessageId: item.last_message_id || item.last_message?.id || null,
           });
         }}
       >
         <LinearGradient colors={['#1FA055', '#16C27B']} style={styles.avatarBorder}>
           <Image
-            source={{ uri: `${IMAGE_BASE_URL}${item.avatar}` }}
+            source={{ uri: getAvatarUrl(item.avatar) }}
             style={styles.avatar}
           />
           {item.online && <View style={styles.onlineDot} />}
@@ -403,7 +454,7 @@ const ChatScreen = ({ navigation }) => {
 
       <FlatList
         data={filteredChats}
-        keyExtractor={(item) => item.user_id}
+        keyExtractor={(item) => item.conversation_id || `${item.product_id}_${item.user_id}`}
         renderItem={renderChatUser}
         contentContainerStyle={[styles.listContent, { paddingBottom: 80 }]}
         showsVerticalScrollIndicator={false}

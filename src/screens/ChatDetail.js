@@ -15,53 +15,23 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ChatApi from '../apis/chatapi'; 
 import Icon from 'react-native-vector-icons/Ionicons';
-import LinearGradient from 'react-native-linear-gradient'; 
+import LinearGradient from 'react-native-linear-gradient';
+import { BASE_URL } from '../apis/api';
+import { getProfile } from '../apis/profile';
 
 // --- Constants (Adjust as necessary) ---
-const IMAGE_BASE_URL = 'https://bhoomi.dinahub.live/';
-const USER_ID = '68c2c4ed6dfd80d5526533c03'; // Example Current User ID - Replace with dynamic value from Auth
-
-// Dummy messages for testing
-const DUMMY_MESSAGES = [
-    {
-        id: '1',
-        content: 'Hello! Is this item still available?',
-        sender_id: 'other_user',
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        is_temp: false,
-    },
-    {
-        id: '2',
-        content: 'Yes, it is available. Are you interested?',
-        sender_id: USER_ID,
-        created_at: new Date(Date.now() - 3000000).toISOString(),
-        is_temp: false,
-    },
-    {
-        id: '3',
-        content: 'Great! What is the best price you can offer?',
-        sender_id: 'other_user',
-        created_at: new Date(Date.now() - 2400000).toISOString(),
-        is_temp: false,
-    },
-    {
-        id: '4',
-        content: 'I can offer ₹500 discount. Final price will be ₹4500.',
-        sender_id: USER_ID,
-        created_at: new Date(Date.now() - 1800000).toISOString(),
-        is_temp: false,
-    },
-    {
-        id: '5',
-        content: 'That sounds good. Can we meet tomorrow?',
-        sender_id: 'other_user',
-        created_at: new Date(Date.now() - 900000).toISOString(),
-        is_temp: false,
-    },
-];
+const IMAGE_BASE_URL = BASE_URL;
 
 const ChatDetailScreen = ({ route, navigation }) => {
-    const { conversationId, receiverId, name, avatar, online, productId } = route.params;
+    const { conversationId, receiverId, name, avatar, online, productId: initialProductId, lastMessageId } = route.params || {};
+
+    // Debug: Log received params
+    console.log('📱 ChatDetail params:', { conversationId, receiverId, name, initialProductId, lastMessageId });
+
+    // Validate required params
+    if (!receiverId) {
+        console.error('❌ ChatDetail: receiverId is required. Received params:', route.params);
+    }
 
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
@@ -71,46 +41,140 @@ const ChatDetailScreen = ({ route, navigation }) => {
     const [pageNum, setPageNum] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isTyping, setIsTyping] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
+    const [productId, setProductId] = useState(initialProductId);
     const listRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const pollingIntervalRef = useRef(null);
     const lastMessageTimeRef = useRef(Date.now());
 
+    // Fetch product_id from last message if not provided
+    useEffect(() => {
+        const fetchProductId = async () => {
+            if (productId) return; // Already have product_id
+            
+            if (lastMessageId) {
+                try {
+                    console.log('🔍 Fetching product_id from message:', lastMessageId);
+                    const message = await ChatApi.getMessage(lastMessageId);
+                    if (message?.product_id) {
+                        setProductId(message.product_id);
+                        console.log('✅ Got product_id from message:', message.product_id);
+                    } else if (message?.data?.product_id) {
+                        setProductId(message.data.product_id);
+                        console.log('✅ Got product_id from message.data:', message.data.product_id);
+                    }
+                } catch (error) {
+                    console.error('❌ Error fetching product_id:', error);
+                }
+            }
+        };
+        fetchProductId();
+    }, [lastMessageId, productId]);
+
+    // Fetch current user ID on mount
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const profile = await getProfile();
+                if (profile?.id) {
+                    setCurrentUserId(String(profile.id));
+                    console.log('👤 Current user ID:', profile.id);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching current user:', error);
+            }
+        };
+        fetchCurrentUser();
+    }, []);
+
     // --- Message Handling ---
 
     // 1. Initial/Paginated Fetch
     const fetchChatMessages = useCallback(async (pageToFetch) => {
-        if (!receiverId) return;
+        if (!receiverId || !productId) {
+            console.log('⚠️ Missing receiverId or productId:', { receiverId, productId });
+            setLoading(false);
+            return;
+        }
 
         if (pageToFetch === 1) {
             setLoading(true);
             setError(null);
         }
 
-        // Load saved messages from AsyncStorage
+        // Fetch messages from API
         try {
-            const savedKey = `chat_messages_${receiverId}`;
-            const savedMessages = await AsyncStorage.getItem(savedKey);
+            const skip = (pageToFetch - 1) * 50;
+            // API: GET /api/messages/conversation/{otherUserId}/{productId}?skip=0&limit=50
+            const response = await ChatApi.getConversationWith(receiverId, productId, skip, 50);
+            console.log('📥 Fetched messages from API:', response);
             
-            if (savedMessages) {
-                setMessages(JSON.parse(savedMessages));
+            // Handle response format: { status: "success", data: [...] } or { messages: [...] } or direct array
+            let apiMessages = [];
+            if (response?.data && Array.isArray(response.data)) {
+                apiMessages = response.data;
+            } else if (response?.data?.messages && Array.isArray(response.data.messages)) {
+                apiMessages = response.data.messages;
+            } else if (Array.isArray(response)) {
+                apiMessages = response;
+            } else if (response?.messages && Array.isArray(response.messages)) {
+                apiMessages = response.messages;
+            }
+            
+            console.log('📝 Parsed messages count:', apiMessages.length);
+            
+            if (apiMessages.length > 0) {
+                // Map API response to expected format
+                const mappedMessages = apiMessages.map(msg => ({
+                    id: msg.id || msg._id,
+                    content: msg.content || msg.message || '',
+                    sender_id: msg.sender_id || msg.sender || msg.from,
+                    created_at: msg.created_at || msg.timestamp || msg.createdAt,
+                    is_temp: false,
+                }));
+                
+                if (pageToFetch === 1) {
+                    setMessages(mappedMessages);
+                } else {
+                    setMessages(prev => [...mappedMessages, ...prev]);
+                }
+                setHasMore(apiMessages.length === 50);
+                
+                // Save to AsyncStorage as cache
+                const savedKey = `chat_messages_${receiverId}`;
+                await AsyncStorage.setItem(savedKey, JSON.stringify(mappedMessages));
             } else {
-                setMessages(DUMMY_MESSAGES);
+                if (pageToFetch === 1) {
+                    setMessages([]);
+                }
+                setHasMore(false);
             }
         } catch (error) {
-            console.log('Error loading saved messages:', error);
-            setMessages(DUMMY_MESSAGES);
+            console.error('❌ Error fetching messages from API:', error);
+            // Fallback to AsyncStorage cache
+            try {
+                const savedKey = `chat_messages_${receiverId}`;
+                const savedMessages = await AsyncStorage.getItem(savedKey);
+                if (savedMessages && pageToFetch === 1) {
+                    setMessages(JSON.parse(savedMessages));
+                }
+            } catch (storageErr) {
+                console.log('Storage error:', storageErr);
+            }
+            setHasMore(false);
         }
         
-        setPageNum(1);
-        setHasMore(false);
+        setPageNum(pageToFetch);
         setLoading(false);
-    }, [receiverId]);
+    }, [receiverId, productId]);
 
-    // Load first page on mount
+    // Load first page when productId is available
     useEffect(() => {
-        fetchChatMessages(1);
-    }, [fetchChatMessages]);
+        if (productId && receiverId) {
+            fetchChatMessages(1);
+        }
+    }, [productId, receiverId, fetchChatMessages]);
 
     // Real-time polling for new messages
     const pollNewMessages = useCallback(async () => {
@@ -168,6 +232,18 @@ const ChatDetailScreen = ({ route, navigation }) => {
     // --- Send Message Handler ---
     const handleSendMessage = useCallback(async () => {
         if (!newMessage.trim() || sending) return;
+        
+        if (!receiverId) {
+            console.error('❌ Cannot send message: receiverId is undefined');
+            setError('Cannot send message: missing receiver');
+            return;
+        }
+        
+        if (!productId) {
+            console.error('❌ Cannot send message: productId is undefined');
+            setError('Cannot send message: missing product context');
+            return;
+        }
 
         const content = newMessage.trim();
         setNewMessage('');
@@ -179,7 +255,7 @@ const ChatDetailScreen = ({ route, navigation }) => {
         const optimisticMessage = {
             id: tempId,
             content: content,
-            sender_id: USER_ID,
+            sender_id: currentUserId || 'current_user',
             created_at: new Date().toISOString(),
             is_temp: true,
         };
@@ -190,15 +266,25 @@ const ChatDetailScreen = ({ route, navigation }) => {
         // Use REST API directly
         try {
             const sentMessage = await ChatApi.sendMessage(content, receiverId, productId);
+            console.log('📥 Send message response:', sentMessage);
+            
+            // Map API response to expected format
+            const mappedMessage = {
+                id: sentMessage.id || sentMessage._id || tempId,
+                content: sentMessage.content || sentMessage.message || content,
+                sender_id: sentMessage.sender_id || sentMessage.sender || currentUserId,
+                created_at: sentMessage.created_at || sentMessage.timestamp || new Date().toISOString(),
+                is_temp: false,
+            };
             
             // Replace temp message with real one
             setMessages(prev => prev.map(msg => 
-                msg.id === tempId ? { ...sentMessage, is_temp: false } : msg
+                msg.id === tempId ? mappedMessage : msg
             ));
             
             // Save to AsyncStorage
             const savedKey = `chat_messages_${receiverId}`;
-            const currentMessages = [...messages, sentMessage];
+            const currentMessages = [...messages, mappedMessage];
             await AsyncStorage.setItem(savedKey, JSON.stringify(currentMessages));
             
             // Update chat list
@@ -239,14 +325,25 @@ const ChatDetailScreen = ({ route, navigation }) => {
         } finally {
             setSending(false);
         }
-    }, [newMessage, sending, messages, receiverId, name, avatar, online, productId]);
+    }, [newMessage, sending, messages, receiverId, name, avatar, online, productId, currentUserId]);
     
     // --- UI Rendering Functions ---
 
     const renderMessage = ({ item }) => {
-        const isCurrentUser = item.sender_id === USER_ID;
-        const messageTime = new Date(item.created_at);
-        const timeString = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        // Compare sender_id with current user ID (handle both string and number)
+        const isCurrentUser = currentUserId && (
+            String(item.sender_id) === String(currentUserId) ||
+            item.sender_id === currentUserId
+        );
+        
+        // Handle invalid date gracefully
+        let timeString = '';
+        if (item.created_at) {
+            const messageTime = new Date(item.created_at);
+            if (!isNaN(messageTime.getTime())) {
+                timeString = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+        }
         
         return (
             <View style={isCurrentUser ? styles.myContainer : styles.otherContainer}>
@@ -256,7 +353,7 @@ const ChatDetailScreen = ({ route, navigation }) => {
                   item.is_temp && styles.tempMessage
                 ]}>
                     <Text style={isCurrentUser ? styles.myText : styles.otherText}>
-                      {item.content}
+                      {item.content || ''}
                     </Text>
                 </View>
                 <View style={styles.timeContainer}>
@@ -358,7 +455,7 @@ const ChatDetailScreen = ({ route, navigation }) => {
                 ref={listRef}
                 data={messages}
                 renderItem={renderMessage}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item, index) => item.id ? item.id.toString() : `msg-${index}`}
                 contentContainerStyle={styles.listContent}
                 inverted={false} // Display newest message at bottom
                 // Pagination props
