@@ -11,6 +11,7 @@ import {
   TextInput,
   Image,
   StatusBar,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ChatApi from '../apis/chatapi'; 
@@ -47,6 +48,7 @@ const ChatDetailScreen = ({ route, navigation }) => {
     const typingTimeoutRef = useRef(null);
     const pollingIntervalRef = useRef(null);
     const lastMessageTimeRef = useRef(Date.now());
+    const shouldScrollRef = useRef(true);
 
     // Fetch product_id from last message if not provided
     useEffect(() => {
@@ -176,50 +178,105 @@ const ChatDetailScreen = ({ route, navigation }) => {
         }
     }, [productId, receiverId, fetchChatMessages]);
 
-    // Real-time polling for new messages
-    const pollNewMessages = useCallback(async () => {
-        if (!receiverId) return;
-        
-        try {
-            const since = lastMessageTimeRef.current;
-            const newMsgs = await ChatApi.getNewMessages(receiverId, since);
-            
-            if (newMsgs && newMsgs.length > 0) {
-                setMessages(prev => {
-                    const existingIds = new Set(prev.map(m => m.id));
-                    const uniqueNewMsgs = newMsgs.filter(m => !existingIds.has(m.id));
-                    
-                    if (uniqueNewMsgs.length > 0) {
-                        // Update last message time
-                        const latestTime = Math.max(...uniqueNewMsgs.map(m => new Date(m.created_at).getTime()));
-                        lastMessageTimeRef.current = latestTime;
-                        
-                        // Save to AsyncStorage
-                        const savedKey = `chat_messages_${receiverId}`;
-                        const updatedMessages = [...prev, ...uniqueNewMsgs];
-                        AsyncStorage.setItem(savedKey, JSON.stringify(updatedMessages));
-                        
-                        return updatedMessages;
-                    }
-                    return prev;
-                });
-            }
-        } catch (error) {
-            console.log('Polling error:', error);
-        }
-    }, [receiverId]);
-
-    // Start/Stop polling
+    // Auto-scroll to the last message when messages are loaded
     useEffect(() => {
-        // Start polling every 3 seconds
-        pollingIntervalRef.current = setInterval(pollNewMessages, 3000);
+        if (messages.length > 0 && listRef.current) {
+            setTimeout(() => {
+                try {
+                    listRef.current?.scrollToEnd({ animated: false });
+                    console.log('✅ Scrolled to last message');
+                } catch (error) {
+                    console.log('Scroll error:', error);
+                }
+            }, 300);
+        }
+    }, [messages]);
+
+    // Real-time polling for new messages
+    const mapMessage = (msg) => ({
+    id: msg.id || msg._id,
+    content: msg.content || msg.message || '',
+    sender_id: msg.sender_id || msg.sender || msg.from,
+    created_at: msg.created_at || msg.timestamp || msg.createdAt,
+    is_temp: false,
+});
+
+const pollNewMessages = useCallback(async (receiverIdVal, productIdVal) => {
+    if (!receiverIdVal || !productIdVal) return;
+
+    try {
+        const skip = 0;
+        const response = await ChatApi.getConversationWith(receiverIdVal, productIdVal, skip, 50);
+        
+        let apiMessages = [];
+        if (response?.data && Array.isArray(response.data)) {
+            apiMessages = response.data;
+        } else if (response?.data?.messages && Array.isArray(response.data.messages)) {
+            apiMessages = response.data.messages;
+        } else if (Array.isArray(response)) {
+            apiMessages = response;
+        } else if (response?.messages && Array.isArray(response.messages)) {
+            apiMessages = response.messages;
+        }
+        
+        if (apiMessages.length > 0) {
+            const mappedMessages = apiMessages.map(msg => ({
+                id: msg.id || msg._id,
+                content: msg.content || msg.message || '',
+                sender_id: msg.sender_id || msg.sender || msg.from,
+                created_at: msg.created_at || msg.timestamp || msg.createdAt,
+                is_temp: false,
+            }));
+            
+            setMessages(mappedMessages);
+            
+            const savedKey = `chat_messages_${receiverIdVal}`;
+            await AsyncStorage.setItem(savedKey, JSON.stringify(mappedMessages));
+        }
+    } catch (error) {
+    }
+}, []);
+
+
+    // Start/Stop polling - refresh every 3 seconds
+    useEffect(() => {
+        if (!receiverId || !productId) return;
+        
+        // Start polling immediately
+        pollNewMessages(receiverId, productId);
+        
+        // Set interval for polling every 3 seconds
+        pollingIntervalRef.current = setInterval(() => {
+            pollNewMessages(receiverId, productId);
+        }, 3000);
+        
+        // Add focus listener to resume polling when screen comes into focus
+        const unsubscribeFocus = navigation.addListener('focus', () => {
+            if (!pollingIntervalRef.current) {
+                pollNewMessages(receiverId, productId);
+                pollingIntervalRef.current = setInterval(() => {
+                    pollNewMessages(receiverId, productId);
+                }, 3000);
+            }
+        });
+
+        // Add blur listener to stop polling when screen loses focus
+        const unsubscribeBlur = navigation.addListener('blur', () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+        });
         
         return () => {
             if (pollingIntervalRef.current) {
                 clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
             }
+            unsubscribeFocus();
+            unsubscribeBlur();
         };
-    }, [pollNewMessages]);
+    }, [receiverId, productId, navigation, pollNewMessages]);
 
     // 2. Load More (Pagination)
     const handleLoadMore = () => {
@@ -262,6 +319,11 @@ const ChatDetailScreen = ({ route, navigation }) => {
         
         // Add to messages immediately for instant UI feedback
         setMessages(prev => [...prev, optimisticMessage]);
+        
+        // Scroll to new message
+        setTimeout(() => {
+            listRef.current?.scrollToEnd({ animated: true });
+        }, 100);
         
         // Use REST API directly
         try {
@@ -326,6 +388,32 @@ const ChatDetailScreen = ({ route, navigation }) => {
             setSending(false);
         }
     }, [newMessage, sending, messages, receiverId, name, avatar, online, productId, currentUserId]);
+
+    // --- Delete Message Handler ---
+    const handleDeleteMessage = useCallback((messageId) => {
+        Alert.alert(
+            'Delete Message',
+            'Are you sure you want to delete this message?',
+            [
+                { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+                {
+                    text: 'Delete',
+                    onPress: async () => {
+                        try {
+                            await ChatApi.deleteMessage(messageId);
+                            // Remove message from UI
+                            setMessages(prev => prev.filter(msg => String(msg.id) !== String(messageId)));
+                            setError(null);
+                        } catch (error) {
+                            console.error('Error deleting message:', error);
+                            setError('Failed to delete message');
+                        }
+                    },
+                    style: 'destructive',
+                },
+            ]
+        );
+    }, []);
     
     // --- UI Rendering Functions ---
 
@@ -341,21 +429,29 @@ const ChatDetailScreen = ({ route, navigation }) => {
         if (item.created_at) {
             const messageTime = new Date(item.created_at);
             if (!isNaN(messageTime.getTime())) {
-                timeString = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                timeString = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' , hour12: true });
             }
         }
         
         return (
             <View style={isCurrentUser ? styles.myContainer : styles.otherContainer}>
-                <View style={[
-                  styles.messageBubble, 
-                  isCurrentUser ? styles.myMessage : styles.otherMessage,
-                  item.is_temp && styles.tempMessage
-                ]}>
+                <TouchableOpacity 
+                    style={[
+                      styles.messageBubble, 
+                      isCurrentUser ? styles.myMessage : styles.otherMessage,
+                      item.is_temp && styles.tempMessage
+                    ]}
+                    onLongPress={() => {
+                        if (isCurrentUser && !item.is_temp) {
+                            handleDeleteMessage(item.id);
+                        }
+                    }}
+                    delayLongPress={500}
+                >
                     <Text style={isCurrentUser ? styles.myText : styles.otherText}>
                       {item.content || ''}
                     </Text>
-                </View>
+                </TouchableOpacity>
                 <View style={styles.timeContainer}>
                   <Text style={styles.timestamp}>{timeString}</Text>
                   {item.is_temp && isCurrentUser && (
@@ -463,6 +559,11 @@ const ChatDetailScreen = ({ route, navigation }) => {
                 onEndReachedThreshold={0.5}
                 ListFooterComponent={renderHeader}
                 initialNumToRender={20}
+                onContentSizeChange={() => {
+                    if (messages.length > 0) {
+                        listRef.current?.scrollToEnd({ animated: false });
+                    }
+                }}
             />
 
             {/* Input Area */}

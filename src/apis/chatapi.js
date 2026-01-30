@@ -337,7 +337,12 @@ export const getNewMessages = async (userId, since) => {
         },
       }
     );
-    return response.data;
+    // API returns {data: {new_messages: [], ...}, status: 'success'}
+    // Extract the new_messages array
+    if (response.data?.data?.new_messages && Array.isArray(response.data.data.new_messages)) {
+      return response.data.data.new_messages;
+    }
+    return [];
   } catch (error) {
     console.error('Error fetching new messages:', error);
     throw error;
